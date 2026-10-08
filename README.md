@@ -2,7 +2,7 @@
 
 Lovelace-Karte für die Integration **Waste Collection Schedule**. Die Tonnen sind kleine Figuren. Ohne Termin schlafen sie mit Zzz. Einen Tag vor der Abholung wachen sie auf und das Ausrufezeichen erscheint. Am Abholtag feiern sie eine Party mit Partyhut und Konfetti.
 
-**Version: 0.10.0**
+**Version: 0.11.0**
 
 ## Installation über HACS
 
@@ -63,6 +63,7 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 0.11.0 | Versionsnummer erhöht, keine Funktionsänderung |
 | 0.10.0 | Komplett neues Design und neue Animation: schlafende Tonnen, Aufwachen, Party mit Hut und Konfetti |
 | 0.9.0 | Comic-Stil zurück, ohne Müllwagen. Am Abholtag hüpft die Tonne, der Deckel fliegt auf, Funken springen heraus, das Gesicht zwinkert |
 | 0.8.0 | Ruhigeres Kachel-Design (ersetzt durch 0.9.0) |

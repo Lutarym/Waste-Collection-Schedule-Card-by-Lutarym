@@ -7,6 +7,7 @@
  * - Einen Tag vorher wachen sie auf, reißen die Augen auf und das Ausrufezeichen erscheint.
  * - Am Abholtag feiern sie eine Party: Partyhut, Konfetti, Tanzen und offener Mund.
  *
+ * Version 0.11.0: Versionsnummer erhöht, keine Funktionsänderung.
  * Version 0.10.0: Komplett neues Design und neue Animation (Schlafen, Aufwachen, Party).
  * Version 0.9.0: Comic-Stil mit Funken, ohne Müllwagen.
  * Version 0.8.0: Ruhigeres Kachel-Design, inzwischen ersetzt.
@@ -21,7 +22,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.10.0";
+const CARD_VERSION = "0.11.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
