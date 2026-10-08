@@ -32,7 +32,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "2.4.0";
+const CARD_VERSION = "2.5.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
@@ -139,92 +139,285 @@ function slotX(i) {
   return SCENE.SLOT_FROM + i * SCENE.SLOT_STEP;
 }
 
-// Die Mülltonne auf Rädern, im lokalen Koordinatensystem um x = 30 zentriert, Boden bei y = 103.
-function binSvg(color) {
-  const c = escapeHtml(color);
-  const dark = escapeHtml(shadeOf(color, 0.35));
-  return `
-    <g>
-      <path d="M18 60 H42 L41 101 Q41 103 39 103 H21 Q19 103 19 101 Z" fill="${c}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
-      <path d="M36 60 H42 L41 101 Q41 103 39 103 H36 Z" fill="${dark}" opacity="0.55"/>
-      <rect x="21" y="63" width="2.6" height="34" rx="1.3" fill="#ffffff" opacity="0.35"/>
-      <rect x="22" y="79" width="16" height="7" rx="1" fill="#ffffff" stroke="${INK}" stroke-width="1.2"/>
-      <g class="wheel-l">
-        <circle cx="22" cy="101" r="2.6" fill="${INK}"/>
-        <line x1="22" y1="99" x2="22" y2="103" stroke="#ffffff" stroke-width="0.9"/>
-      </g>
-      <g class="wheel-r">
-        <circle cx="38" cy="101" r="2.6" fill="${INK}"/>
-        <line x1="38" y1="99" x2="38" y2="103" stroke="#ffffff" stroke-width="0.9"/>
-      </g>
-      <rect x="15" y="53" width="30" height="8" rx="2.5" fill="${c}" stroke="${INK}" stroke-width="2.2"/>
-      <rect x="17" y="54.5" width="26" height="2" rx="1" fill="#ffffff" opacity="0.3"/>
-    </g>`;
+// Three.js wird beim ersten Bedarf von jsDelivr geladen.
+const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js";
+let threeModulePromise = null;
+
+function loadThree() {
+  if (!threeModulePromise) {
+    threeModulePromise = import(THREE_URL).catch((err) => {
+      threeModulePromise = null;
+      throw err;
+    });
+  }
+  return threeModulePromise;
 }
 
-// Der Mann, etwa 81 Einheiten groß, Mitte bei x = 100, Boden bei y = 103.5.
-const MAN_SVG = `
-  <g>
-    <path d="M97 70 L94 88 L93 102 M104 70 L107 88 L108 102" fill="none" stroke="${INK}" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M97 70 L94 88 L93 102 M104 70 L107 88 L108 102" fill="none" stroke="${TROUSERS}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M89 103.5 H97 M104 103.5 H112" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/>
-    <path d="M109 44 L113 58 L110 66" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M109 44 L113 58 L110 66" fill="none" stroke="${SKIN}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M89 44 Q100 40 111 44 L112 71 Q100 74 88 71 Z" fill="${BLUE}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
-    <path d="M88 70 Q100 73 112 70" fill="none" stroke="${INK}" stroke-width="2"/>
-    <path d="M90 46 Q78 48 74 58" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>
-    <path d="M90 46 Q78 48 74 58" fill="none" stroke="${BLUE}" stroke-width="3.2" stroke-linecap="round"/>
-    <circle cx="74" cy="58" r="2.6" fill="${SKIN}" stroke="${INK}" stroke-width="1.6"/>
-    <rect x="97" y="36" width="6" height="6" fill="${SKIN}"/>
-    <circle cx="100" cy="30" r="7.5" fill="${SKIN}" stroke="${INK}" stroke-width="2.2"/>
-    <path d="M92.5 29 Q93 21 100 21 Q107.5 21 107.5 29 Q104 25.5 100 25.5 Q96 25.5 92.5 29 Z" fill="${HAIR}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
-    <circle cx="97.5" cy="30.5" r="0.9" fill="${INK}"/>
-    <circle cx="102.5" cy="30.5" r="0.9" fill="${INK}"/>
-    <path d="M97.5 34 Q100 35.8 102.5 34" fill="none" stroke="${INK}" stroke-width="1.2" stroke-linecap="round"/>
-  </g>`;
+// Welt in Metern: 100 Szene-Einheiten entsprechen 1 Welt-Einheit. Mitte der Straße bei x = 0.
+const WORLD_X = (x) => (x - 800) / 100;
+const SLOT_Z = 1.7;   // Abstellplatz an der Straße
+const YARD_Z = 0.2;   // Abstellplatz im Hinterhof
+const MAN_Z = 0.6;    // Standplatz des Mannes
 
-// Hintergrund: Himmel, Haus mit Hintereingang, Hinterhof, Gehweg und Straße.
-const BACKGROUND_SVG = `
-  <rect x="0" y="0" width="1600" height="900" fill="#dcecf7"/>
-  <rect x="1040" y="120" width="560" height="580" fill="#efe3cf" stroke="${INK}" stroke-width="5"/>
-  <path d="M1010 120 L1320 10 L1630 120 Z" fill="#b5573a" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
-  <rect x="1090" y="190" width="100" height="100" fill="#bfe0f5" stroke="${INK}" stroke-width="4"/>
-  <rect x="1380" y="190" width="100" height="100" fill="#bfe0f5" stroke="${INK}" stroke-width="4"/>
-  <rect x="1090" y="410" width="90" height="290" fill="#9a6a45" stroke="${INK}" stroke-width="4"/>
-  <rect x="1020" y="560" width="20" height="140" fill="#8d5b3a" stroke="${INK}" stroke-width="4"/>
-  <rect x="0" y="700" width="1040" height="60" fill="#d9d4c7"/>
-  <rect x="1040" y="700" width="560" height="60" fill="#b8d89a"/>
-  <rect x="0" y="760" width="1600" height="140" fill="#5b6068"/>
-  <line x1="0" y1="760" x2="1600" y2="760" stroke="${INK}" stroke-width="5"/>
-  <line x1="0" y1="700" x2="1040" y2="700" stroke="${INK}" stroke-width="3"/>
-  <line x1="0" y1="836" x2="1600" y2="836" stroke="#ffffff" stroke-width="6" stroke-dasharray="60 40" opacity="0.7"/>`;
+function matFor(THREE, color, roughness) {
+  return new THREE.MeshStandardMaterial({ color, roughness: roughness === undefined ? 0.6 : roughness });
+}
 
-// Die Szene mit allen Tonnen, dem Mann, den Glanzflächen und den Sprechblasen.
-function sceneHtml(infos) {
-  const n = infos.length;
-  const glows = infos
-    .map((b, i) => `<ellipse class="glow" data-i="${i}" cx="${slotX(i)}" cy="${SCENE.GROUND + 6}" rx="150" ry="26" fill="${escapeHtml(b.color)}" opacity="0"/>`)
-    .join("");
-  const bins = infos.map((b, i) => `<g class="bin-g" data-i="${i}">${binSvg(b.color)}</g>`).join("");
-  const labels = infos
-    .map((b, i) => {
-      if (!b.label) return "";
-      return `<g class="label" data-i="${i}" opacity="0" transform="translate(${slotX(i)},${SCENE.GROUND - 270})">
-        <rect x="-150" y="-48" width="300" height="96" rx="26" fill="${escapeHtml(b.color)}" stroke="${INK}" stroke-width="6"/>
-        <text x="0" y="22" text-anchor="middle" font-size="62" font-weight="800" fill="#ffffff" stroke="${INK}" stroke-width="5" paint-order="stroke" font-family="sans-serif">${escapeHtml(b.label)}</text>
-      </g>`;
-    })
-    .join("");
-  return `
-    <svg class="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet">
-      <g class="scene-inner">
-        ${BACKGROUND_SVG}
-        ${glows}
-        ${bins}
-        ${labels}
-        <g class="man-wrap">${MAN_SVG}</g>
-      </g>
-    </svg>`;
+function addBox(THREE, parent, w, h, d, color, x, y, z, cast) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matFor(THREE, color, 0.8));
+  mesh.position.set(x, y, z);
+  mesh.castShadow = Boolean(cast);
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+// Die Mülltonne auf Rädern, Mitte am Boden, Vorderseite zeigt nach +z.
+function buildBin(THREE, color) {
+  const group = new THREE.Group();
+  addBox(THREE, group, 0.6, 0.8, 0.66, color, 0, 0.5, 0, true);
+  addBox(THREE, group, 0.64, 0.12, 0.7, mixHex(color, "#ffffff", 0.2), 0, 0.96, 0, true);
+  addBox(THREE, group, 0.3, 0.2, 0.01, "#ffffff", 0, 0.55, 0.335, false);
+  const wheelGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.05, 14);
+  wheelGeo.rotateX(Math.PI / 2);
+  const wheelMat = matFor(THREE, "#222222", 0.5);
+  const wheels = [-0.22, 0.22].map((x) => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(x, 0.07, -0.28);
+    w.castShadow = true;
+    group.add(w);
+    return w;
+  });
+  const glowGeo = new THREE.CircleGeometry(0.75, 32);
+  glowGeo.rotateX(-Math.PI / 2);
+  const glow = new THREE.Mesh(
+    glowGeo,
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false })
+  );
+  glow.position.set(0, 0.02, 0);
+  group.add(glow);
+  return { group, wheels, glow };
+}
+
+// Der Mann aus einfachen Formen, etwa 1,9 Meter groß. Beine und Arme sind drehbar.
+function buildMan(THREE) {
+  const group = new THREE.Group();
+  const skin = matFor(THREE, SKIN, 0.6);
+  const blue = matFor(THREE, BLUE, 0.7);
+  const trousers = matFor(THREE, TROUSERS, 0.7);
+  const hair = matFor(THREE, HAIR, 0.8);
+  const shoe = matFor(THREE, "#222222", 0.6);
+
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.62, 0.26), blue);
+  torso.position.set(0, 1.25, 0);
+  torso.castShadow = true;
+  group.add(torso);
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 12), skin);
+  neck.position.set(0, 1.6, 0);
+  group.add(neck);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 20, 16), skin);
+  head.position.set(0, 1.76, 0);
+  head.castShadow = true;
+  group.add(head);
+
+  const hairMesh = new THREE.Mesh(new THREE.SphereGeometry(0.163, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), hair);
+  hairMesh.position.set(0, 1.78, -0.01);
+  group.add(hairMesh);
+
+  for (const x of [-0.05, 0.05]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), shoe);
+    eye.position.set(x, 1.77, 0.14);
+    group.add(eye);
+  }
+
+  const legs = [-0.11, 0.11].map((x) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(x, 0.95, 0);
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.7, 4, 10), trousers);
+    leg.position.set(0, -0.44, 0);
+    leg.castShadow = true;
+    pivot.add(leg);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.26), shoe);
+    foot.position.set(0, -0.9, 0.04);
+    foot.castShadow = true;
+    pivot.add(foot);
+    group.add(pivot);
+    return pivot;
+  });
+
+  const arms = [-0.3, 0.3].map((x) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(x, 1.5, 0);
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.45, 4, 10), blue);
+    arm.position.set(0, -0.29, 0);
+    arm.castShadow = true;
+    pivot.add(arm);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), skin);
+    hand.position.set(0, -0.6, 0);
+    pivot.add(hand);
+    group.add(pivot);
+    return pivot;
+  });
+
+  return { group, legL: legs[0], legR: legs[1], armL: arms[0], armR: arms[1] };
+}
+
+// Straße, Gehweg, Hinterhof und Haus.
+function buildWorld(THREE, scene) {
+  addBox(THREE, scene, 10.4, 0.1, 1.2, "#d9d4c7", -2.8, -0.05, 1.6);
+  addBox(THREE, scene, 5.6, 0.1, 2.6, "#b8d89a", 5.2, -0.05, -0.3);
+  addBox(THREE, scene, 16, 0.1, 8, "#5b6068", 0, -0.05, 6.2);
+  addBox(THREE, scene, 16, 0.14, 0.12, "#c9c9c9", 0, 0.07, 2.2);
+  for (let x = -7.5; x < 8; x += 1.2) {
+    addBox(THREE, scene, 0.6, 0.01, 0.08, "#ffffff", x, 0.003, 4.6);
+  }
+
+  addBox(THREE, scene, 5.6, 4.6, 2.4, "#efe3cf", 5.2, 2.3, -1.2, true);
+  const roofGeo = new THREE.ConeGeometry(4.2, 2.2, 4);
+  roofGeo.rotateY(Math.PI / 4);
+  const roof = new THREE.Mesh(roofGeo, matFor(THREE, "#b5573a", 0.7));
+  roof.position.set(5.2, 5.7, -1.2);
+  roof.castShadow = true;
+  scene.add(roof);
+  addBox(THREE, scene, 0.9, 0.9, 0.05, "#bfe0f5", 3.4, 3.0, 0.01, false);
+  addBox(THREE, scene, 0.9, 0.9, 0.05, "#bfe0f5", 6.3, 3.0, 0.01, false);
+  addBox(THREE, scene, 0.9, 2.6, 0.06, "#9a6a45", 3.35, 1.3, 0.02, false);
+  addBox(THREE, scene, 0.2, 1.4, 0.2, "#8d5b3a", 2.3, 0.7, 0.5, true);
+}
+
+function makeLabelSprite(THREE, text, color) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 160;
+  const ctx = canvas.getContext("2d");
+  const r = 36;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.arcTo(512, 0, 512, 160, r);
+  ctx.arcTo(512, 160, 0, 160, r);
+  ctx.arcTo(0, 160, 0, 0, r);
+  ctx.arcTo(0, 0, 512, 0, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 88px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 256, 84);
+  const texture = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }));
+  sprite.scale.set(1.6, 0.5, 1);
+  sprite.visible = false;
+  return sprite;
+}
+
+// Baut die 3D-Szene in den Container und liefert eine update-Funktion und dispose.
+function build3D(THREE, infos, wrap) {
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.domElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;";
+  wrap.insertBefore(renderer.domElement, wrap.firstChild);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color("#dcecf7");
+  const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
+  camera.position.set(0, 5, 16);
+  camera.lookAt(0, 2.7, 0.5);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x6b7a88, 1.4));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  sun.position.set(-4, 9, 8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.camera.left = -9;
+  sun.shadow.camera.right = 9;
+  sun.shadow.camera.top = 8;
+  sun.shadow.camera.bottom = -4;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 30;
+  scene.add(sun);
+  scene.add(sun.target);
+
+  buildWorld(THREE, scene);
+
+  const bins = infos.map((b) => {
+    const bin = buildBin(THREE, b.color);
+    scene.add(bin.group);
+    bin.label = makeLabelSprite(THREE, b.label || "", b.color);
+    bin.label.position.set(0, 1.55, 0);
+    bin.group.add(bin.label);
+    bin.group.add(bin.glow);
+    return bin;
+  });
+
+  const man = buildMan(THREE);
+  scene.add(man.group);
+
+  const resize = () => {
+    const w = wrap.clientWidth || 640;
+    const h = wrap.clientHeight || 360;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  };
+  const observer = new ResizeObserver(resize);
+  observer.observe(wrap);
+  resize();
+
+  const update = (st, time, alpha) => {
+    const n = infos.length;
+    const carrying = st.carry;
+    const carryZ = carrying ? YARD_Z + (SLOT_Z - YARD_Z) * carrying.p : YARD_Z;
+    const bob = st.moving ? Math.abs(Math.sin(time * 0.025)) * 0.05 : 0;
+    const swing = st.moving ? Math.sin(time * 0.012) * 0.6 : 0;
+    man.group.position.set(WORLD_X(st.manX), bob, carrying ? carryZ + 0.6 : MAN_Z);
+    man.legL.rotation.x = swing;
+    man.legR.rotation.x = -swing;
+    man.armL.rotation.z = carrying ? -1.2 : 0;
+    man.armL.rotation.x = carrying ? 0 : -swing * 0.4;
+    man.armR.rotation.x = carrying ? -0.4 : swing * 0.5;
+
+    st.bins.forEach((bin, i) => {
+      const part = bins[i];
+      if (!part) return;
+      let z = YARD_Z;
+      if (bin.placed) z = SLOT_Z;
+      else if (carrying && carrying.i === i) z = carryZ;
+      part.group.position.set(WORLD_X(bin.x), 0, z);
+      const dist = (bin.x - yardX(i, n)) / 100;
+      part.wheels.forEach((w) => {
+        w.rotation.z = -dist / 0.07;
+      });
+      part.glow.material.opacity = bin.placed ? 0.35 + 0.25 * Math.sin(time * 0.008) : 0;
+      part.label.visible = bin.placed && Boolean(infos[i].label);
+    });
+
+    renderer.render(scene, camera);
+    return alpha;
+  };
+
+  const dispose = () => {
+    observer.disconnect();
+    scene.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (obj.material.map) obj.material.map.dispose();
+        obj.material.dispose();
+      }
+    });
+    renderer.dispose();
+    renderer.domElement.remove();
+  };
+
+  return { update, dispose };
 }
 
 // Der Ablauf einer Abholung: der Mann holt Tonnen aus dem Hinterhof und stellt sie an die Straße.
@@ -261,6 +454,7 @@ function sceneAt(tl, time) {
   for (let i = 0; i < tl.n; i++) bins.push({ x: yardX(i, tl.n), placed: false });
   let manX = SCENE.MAN_START;
   let moving = false;
+  let carry = null;
   for (const seg of tl.segs) {
     if (time >= seg.t1) {
       manX = seg.manTo;
@@ -271,7 +465,10 @@ function sceneAt(tl, time) {
       const p = (time - seg.t0) / (seg.t1 - seg.t0);
       manX = seg.manFrom + (seg.manTo - seg.manFrom) * p;
       moving = seg.manTo !== seg.manFrom;
-      if (seg.carry >= 0) bins[seg.carry].x = seg.binFrom + (seg.binTo - seg.binFrom) * p;
+      if (seg.carry >= 0) {
+        bins[seg.carry].x = seg.binFrom + (seg.binTo - seg.binFrom) * p;
+        carry = { i: seg.carry, p };
+      }
     }
     break;
   }
@@ -282,7 +479,7 @@ function sceneAt(tl, time) {
       bins[i].x = slotX(i);
     }
   }
-  return { manX, moving, bins };
+  return { manX, moving, bins, carry };
 }
 
 class LutarymWasteCollectionCard extends HTMLElement {
@@ -343,11 +540,11 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this._els && this._tl) this._startAnim();
+    if (this._tl && this._config && this._config.style === "mann") this._mountScene();
   }
 
   disconnectedCallback() {
-    this._stopAnim();
+    this._disposeScene();
   }
 
   static getConfigElement() {
@@ -376,9 +573,39 @@ class LutarymWasteCollectionCard extends HTMLElement {
     this._raf = null;
   }
 
+  _disposeScene() {
+    this._stopAnim();
+    this._mountToken = (this._mountToken || 0) + 1;
+    if (this._scene3d) {
+      this._scene3d.dispose();
+      this._scene3d = null;
+    }
+  }
+
+  async _mountScene() {
+    const token = (this._mountToken = (this._mountToken || 0) + 1);
+    const wrap = this.shadowRoot.querySelector(".scene-wrap");
+    if (!wrap || !this._tl) return;
+    const fallback = wrap.querySelector(".fallback");
+    let THREE;
+    try {
+      THREE = await loadThree();
+      if (token !== this._mountToken || !wrap.isConnected) return;
+      this._scene3d = build3D(THREE, this._infos, wrap);
+    } catch (err) {
+      if (token === this._mountToken && fallback) {
+        fallback.textContent =
+          "3D-Grafik konnte nicht geladen werden. Die Karte braucht Internetzugriff auf three.js (cdn.jsdelivr.net) und WebGL im Browser.";
+      }
+      return;
+    }
+    if (fallback) fallback.textContent = "";
+    this._startAnim();
+  }
+
   _startAnim() {
     this._stopAnim();
-    if (!this._els || !this._tl) return;
+    if (!this._scene3d || !this._tl) return;
     const tl = this._tl;
     if (!this._config.animate || tl.segs.length === 0) {
       this._update(tl.holdEnd);
@@ -393,39 +620,20 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   _update(time) {
-    const els = this._els;
     const tl = this._tl;
-    if (!els || !tl) return;
-    const st = sceneAt(tl, time);
-    const bob = st.moving ? Math.abs(Math.sin(time * 0.025)) * 5 : 0;
-    els.man.setAttribute(
-      "transform",
-      `translate(${st.manX},${SCENE.GROUND - bob}) scale(${SCENE.SCALE}) translate(-100,-103.5)`
-    );
-    st.bins.forEach((bin, i) => {
-      const el = els.bins[i];
-      if (el) {
-        el.setAttribute("transform", `translate(${bin.x},${SCENE.GROUND}) scale(${SCENE.SCALE}) translate(-30,-103.5)`);
-        const deg = ((bin.x - yardX(i, tl.n)) / (SCENE.SCALE * 2.6)) * (180 / Math.PI);
-        els.wl[i].setAttribute("transform", `rotate(${deg} 22 101)`);
-        els.wr[i].setAttribute("transform", `rotate(${deg} 38 101)`);
-      }
-      if (els.glows[i]) {
-        els.glows[i].setAttribute("opacity", bin.placed ? (0.35 + 0.25 * Math.sin(time * 0.008)).toFixed(3) : "0");
-      }
-      if (els.labels[i]) {
-        els.labels[i].setAttribute("opacity", bin.placed ? "1" : "0");
-      }
-    });
+    if (!this._scene3d || !tl) return;
     let alpha = 1;
     if (time > tl.holdEnd) alpha = Math.max(0, 1 - (time - tl.holdEnd) / 700);
-    els.inner.setAttribute("opacity", alpha.toFixed(3));
+    const st = sceneAt(tl, time);
+    this._scene3d.update(st, time, alpha);
+    const fade = this.shadowRoot.querySelector(".fade");
+    if (fade) fade.style.opacity = String(1 - alpha);
   }
 
   _render() {
     if (!this._config) return;
     if (!this._config.demo && !this._hass) return;
-    this._stopAnim();
+    this._disposeScene();
 
     const cfg = this._config;
     const mann = cfg.style === "mann";
@@ -484,7 +692,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
         )
         .join("");
       body = `
-        <div class="scene-wrap">${sceneHtml(infos)}</div>
+        <div class="scene-wrap"><div class="fallback"></div><div class="fade"></div></div>
         <div class="legend">${legend}</div>`;
     } else {
       this._tl = null;
@@ -643,10 +851,24 @@ class LutarymWasteCollectionCard extends HTMLElement {
           overflow: hidden;
           box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35);
         }
-        .scene {
-          width: 100%;
-          height: 100%;
-          display: block;
+        .scene-wrap canvas { position: absolute; inset: 0; }
+        .fallback {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          text-align: center;
+          font-size: 0.9em;
+          color: #1b1b1b;
+        }
+        .fade {
+          position: absolute;
+          inset: 0;
+          background: #dcecf7;
+          opacity: 0;
+          pointer-events: none;
         }
         .legend {
           display: flex;
@@ -711,19 +933,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
     `;
 
     if (mann) {
-      const root = this.shadowRoot;
-      this._els = {
-        man: root.querySelector(".man-wrap"),
-        inner: root.querySelector(".scene-inner"),
-        bins: infos.map((_, i) => root.querySelector(`.bin-g[data-i="${i}"]`)),
-        wl: infos.map((_, i) => root.querySelector(`.bin-g[data-i="${i}"] .wheel-l`)),
-        wr: infos.map((_, i) => root.querySelector(`.bin-g[data-i="${i}"] .wheel-r`)),
-        glows: infos.map((_, i) => root.querySelector(`.glow[data-i="${i}"]`)),
-        labels: infos.map((_, i) => root.querySelector(`.label[data-i="${i}"]`)),
-      };
-      this._startAnim();
-    } else {
-      this._els = null;
+      this._mountScene();
     }
   }
 }
