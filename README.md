@@ -2,7 +2,7 @@
 
 Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne wird mit ihrer Farbe angezeigt. Einen Tag vor der Abholung hüpft sie, am Abholtag hüpft und leuchtet sie stärker.
 
-**Version: 0.5.0**
+**Version: 0.6.5**
 
 ## Installation über HACS
 
@@ -63,6 +63,7 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 0.6.5 | Versionsnummer angeglichen, keine Funktionsänderung |
 | 0.5.0 | Comic-Stil mit Gesicht, lustigere Quetsch-und-Streck-Animation, Sprechblasen für „Heute“ und „Morgen“ |
 | 0.4.0 | Versionsnummer angeglichen, keine Funktionsänderung |
 | 0.3.1 | Animation läuft auch bei aktiver Einstellung „Bewegung reduzieren“ |
