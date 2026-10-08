@@ -2,6 +2,7 @@
  * Waste Collection Schedule Card by Lutarym
  * Zeigt die Abholtermine der Müllbehälter aus der Integration "Waste Collection Schedule".
  * Eine Tonne hüpft einen Tag vorher, am Abholtag hüpft und leuchtet sie stärker.
+ * Version 0.4.0: Versionsnummer angeglichen, keine Funktionsänderung.
  * Version 0.3.1: Animation ignoriert die Einstellung "Bewegung reduzieren".
  * Version 0.3.0: Demo-Modus mit Beispieldaten, ohne echte Sensoren.
  * Version 0.2.0: visueller Editor, neue Optionen show_dates, show_badges und animate.
@@ -9,7 +10,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.3.1";
+const CARD_VERSION = "0.4.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
