@@ -1,8 +1,11 @@
 # Waste Collection Schedule Card by Lutarym
 
-Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne ist ein Abreißkalender-Blatt in ihrer Farbe. Ohne Termin hängt das Blatt ruhig am Ring. Einen Tag vorher wackelt es und ein Stempel „Morgen“ erscheint. Am Abholtag reißt das Blatt ab und ein „RRIP!“ fliegt heraus.
+Lovelace-Karte für die Integration **Waste Collection Schedule**. Die Darstellung wird im Editor unter „Darstellung“ gewählt:
 
-**Version: 1.0.0**
+- **Glaskarte** (Standard): Jede Tonne ist eine Glaskarte. Ohne Termin schwebt sie ruhig. Einen Tag vorher schwebt sie etwas stärker. Am Abholtag hebt sie sich in 3D nach vorn ab und leuchtet.
+- **Mann mit Tonnen**: Ein Mann bringt die Tonnen nach vorn. Einen Tag vorher angelt er mit einem Köder, und die Tonne hüpft zu ihm. Der Köder ist je nach Tonne anders: Fisch (Restmüll), Zeitungsknäuel (Papier), Joghurtbecher (Gelbe Tonne), Apfelgriebs (Biotonne). Am Abholtag rollt er die Tonne auf ihren Rädern an den Rand. Die Tonne wird am Namen erkannt.
+
+**Version: 2.3.0**
 
 ## Installation über HACS
 
@@ -52,6 +55,7 @@ bins:
 | `title` | nein | Müllabfuhr | Überschrift der Karte |
 | `show_dates` | nein | true | Zeigt das Abholdatum unter jeder Tonne |
 | `show_badges` | nein | true | Zeigt „Heute“ und „Morgen“ bei anstehenden Terminen |
+| `style` | nein | glas | Darstellung der Karte: „glas“ (Glaskarte) oder „mann“ (Mann mit Tonnen) |
 | `animate` | nein | true | Schaltet die Animationen ein oder aus |
 | `demo` | nein | false | Zeigt Beispieldaten statt echter Sensoren |
 | `bins` | ja, außer im Demo-Modus | | Liste der Tonnen |
@@ -63,6 +67,10 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 2.3.0 | Mann mit Tonnen mit realistischen Größenverhältnissen, Tonne auf Rädern, Abholung durch Rollen zum Rand |
+| 2.2.0 | Neue Darstellung „Mann mit Tonnen“: Köder und Schubkarre, die Tonnen werden nach vorn geholt. Ersetzt die Comic-Tonnen |
+| 2.1.0 | Neue Darstellung „Comic-Tonnen“ mit Figuren für Restmüll, Papier, Gelbe Tonne und Biotonne (ersetzt durch 2.2.0) |
+| 2.0.0 | Neue Darstellung Glaskarte mit 3D-Animation am Abholtag, Auswahl der Darstellung im Editor (Option `style`) |
 | 1.0.0 | Erste große Version: Abreißkalender-Konzept, Versionssprung auf 1.0.0 |
 | 0.12.0 | Komplett neues Konzept: Abreißkalender statt Tonnenfiguren, Blatt reißt am Abholtag ab |
 | 0.11.0 | Versionsnummer erhöht, keine Funktionsänderung |
