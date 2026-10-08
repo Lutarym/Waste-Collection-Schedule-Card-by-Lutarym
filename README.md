@@ -3,9 +3,9 @@
 Lovelace-Karte für die Integration **Waste Collection Schedule**. Die Darstellung wird im Editor unter „Darstellung“ gewählt:
 
 - **Glaskarte** (Standard): Jede Tonne ist eine Glaskarte. Ohne Termin schwebt sie ruhig. Einen Tag vorher schwebt sie etwas stärker. Am Abholtag hebt sie sich in 3D nach vorn ab und leuchtet.
-- **Mann mit Tonnen**: Ein Mann bringt die Tonnen nach vorn. Einen Tag vorher angelt er mit einem Köder, und die Tonne hüpft zu ihm. Der Köder ist je nach Tonne anders: Fisch (Restmüll), Zeitungsknäuel (Papier), Joghurtbecher (Gelbe Tonne), Apfelgriebs (Biotonne). Am Abholtag rollt er die Tonne auf ihren Rädern an den Rand. Die Tonne wird am Namen erkannt.
+- **Mann mit Tonnen**: Eine 16:9 Szene mit Haus, Hinterhof und Straße. Ein Mann holt die Tonnen, die bald abgeholt werden, aus dem Hinterhof und stellt sie an die Straße. Jede Tonne behält ihre Farbe. Eine Tonne mit Termin morgen oder heute leuchtet beim Abstellen in ihrer Farbe und zeigt eine Sprechblase „Morgen!“ oder „Heute!“. Tonnen ohne Termin bleiben im Hinterhof.
 
-**Version: 2.3.0**
+**Version: 2.4.0**
 
 ## Installation über HACS
 
@@ -67,6 +67,7 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 2.4.0 | Mann mit Tonnen als eine gemeinsame 16:9 Szene: Der Mann holt die Tonnen aus dem Hinterhof an die Straße, Farbe und Sprechblase zeigen die Abholung |
 | 2.3.0 | Mann mit Tonnen mit realistischen Größenverhältnissen, Tonne auf Rädern, Abholung durch Rollen zum Rand |
 | 2.2.0 | Neue Darstellung „Mann mit Tonnen“: Köder und Schubkarre, die Tonnen werden nach vorn geholt. Ersetzt die Comic-Tonnen |
 | 2.1.0 | Neue Darstellung „Comic-Tonnen“ mit Figuren für Restmüll, Papier, Gelbe Tonne und Biotonne (ersetzt durch 2.2.0) |

@@ -32,7 +32,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "2.3.0";
+const CARD_VERSION = "2.4.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
@@ -92,15 +92,6 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-// Welcher Köder zu einer Tonne gehört, wird am Namen erkannt.
-function binType(name) {
-  const n = String(name || "").toLowerCase();
-  if (n.includes("papier")) return "papier";
-  if (n.includes("gelb")) return "gelb";
-  if (n.includes("bio")) return "bio";
-  return "rest";
-}
-
 function hexToRgb(hex) {
   let h = String(hex || "").trim().replace("#", "");
   if (h.length === 3) h = h.split("").map((ch) => ch + ch).join("");
@@ -125,56 +116,55 @@ const BLUE = "#2f6fbf";
 const TROUSERS = "#34495e";
 const HAIR = "#4a3020";
 
-// Der Köder am Angelhaken, im Ursprung (0, 0) gezeichnet.
-function baitSvg(type) {
-  if (type === "papier") {
-    return `
-      <circle r="6" fill="#f4f1e8" stroke="${INK}" stroke-width="2"/>
-      <path d="M-3.5 -2 H3.5 M-3.5 1 H3.5" stroke="#8a8a8a" stroke-width="1.2"/>`;
-  }
-  if (type === "gelb") {
-    return `
-      <rect x="-6" y="-8" width="12" height="3" rx="1.5" fill="#ffffff" stroke="${INK}" stroke-width="2"/>
-      <path d="M-5 -5 H5 L4 6 H-4 Z" fill="#ff8fa3" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`;
-  }
-  if (type === "bio") {
-    return `
-      <path d="M0 -3 C-7 -7 -8 3 0 7 C8 3 7 -7 0 -3 Z" fill="#e53935" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M1 -3 Q3 -8 7 -8 Q5 -3 1 -3 Z" fill="#4caf50" stroke="${INK}" stroke-width="1.5"/>`;
-  }
-  return `
-    <path d="M-9 0 Q-2 -6 7 0 Q-2 6 -9 0 Z" fill="#9fb8c8" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M7 0 L12 -4.5 L12 4.5 Z" fill="#9fb8c8" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`;
+// Die Szene ist 1600 x 900 Einheiten breit und wird als 16:9 Karte dargestellt.
+const SCENE = {
+  GROUND: 700,        // Gehweg und Hinterhof-Boden
+  SCALE: 3.6,         // Skalierung für Mann und Tonnen
+  MAN_START: 1060,    // Mann steht am Hintereingang
+  YARD_FROM: 1140,    // erste Tonne im Hinterhof
+  YARD_TO: 1500,      // letzte Position im Hinterhof
+  SLOT_FROM: 170,     // erster Platz an der Straße
+  SLOT_STEP: 200,     // Abstand der Plätze an der Straße
+  GRAB: 84,           // Abstand Mann zur Tonnenmitte beim Greifen
+  WALK: 0.42,         // Gehgeschwindigkeit in Einheiten pro Millisekunde
+  PULL: 0.28,         // Ziehgeschwindigkeit der Tonne
+};
+
+function yardX(i, n) {
+  if (n <= 1) return SCENE.YARD_FROM;
+  return SCENE.YARD_FROM + i * Math.min(120, (SCENE.YARD_TO - SCENE.YARD_FROM) / (n - 1));
 }
 
-// Die Tonne auf Rädern. Maßstab: etwa 0,6 der Körpergröße des Mannes, Boden bei y = 103.
+function slotX(i) {
+  return SCENE.SLOT_FROM + i * SCENE.SLOT_STEP;
+}
+
+// Die Mülltonne auf Rädern, im lokalen Koordinatensystem um x = 30 zentriert, Boden bei y = 103.
 function binSvg(color) {
   const c = escapeHtml(color);
   const dark = escapeHtml(shadeOf(color, 0.35));
   return `
-    <g class="bin-anim">
+    <g>
       <path d="M18 60 H42 L41 101 Q41 103 39 103 H21 Q19 103 19 101 Z" fill="${c}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
       <path d="M36 60 H42 L41 101 Q41 103 39 103 H36 Z" fill="${dark}" opacity="0.55"/>
       <rect x="21" y="63" width="2.6" height="34" rx="1.3" fill="#ffffff" opacity="0.35"/>
       <rect x="22" y="79" width="16" height="7" rx="1" fill="#ffffff" stroke="${INK}" stroke-width="1.2"/>
-      <g class="wheel wheel-l">
+      <g class="wheel-l">
         <circle cx="22" cy="101" r="2.6" fill="${INK}"/>
         <line x1="22" y1="99" x2="22" y2="103" stroke="#ffffff" stroke-width="0.9"/>
       </g>
-      <g class="wheel wheel-r">
+      <g class="wheel-r">
         <circle cx="38" cy="101" r="2.6" fill="${INK}"/>
         <line x1="38" y1="99" x2="38" y2="103" stroke="#ffffff" stroke-width="0.9"/>
       </g>
-      <g class="lid">
-        <rect x="15" y="53" width="30" height="8" rx="2.5" fill="${c}" stroke="${INK}" stroke-width="2.2"/>
-        <rect x="17" y="54.5" width="26" height="2" rx="1" fill="#ffffff" opacity="0.3"/>
-      </g>
+      <rect x="15" y="53" width="30" height="8" rx="2.5" fill="${c}" stroke="${INK}" stroke-width="2.2"/>
+      <rect x="17" y="54.5" width="26" height="2" rx="1" fill="#ffffff" opacity="0.3"/>
     </g>`;
 }
 
-// Der Mann in Alltagskleidung, etwa 81 Einheiten groß. Vordere Hand bei (80, 58).
+// Der Mann, etwa 81 Einheiten groß, Mitte bei x = 100, Boden bei y = 103.5.
 const MAN_SVG = `
-  <g class="man">
+  <g>
     <path d="M97 70 L94 88 L93 102 M104 70 L107 88 L108 102" fill="none" stroke="${INK}" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M97 70 L94 88 L93 102 M104 70 L107 88 L108 102" fill="none" stroke="${TROUSERS}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M89 103.5 H97 M104 103.5 H112" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/>
@@ -182,9 +172,9 @@ const MAN_SVG = `
     <path d="M109 44 L113 58 L110 66" fill="none" stroke="${SKIN}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M89 44 Q100 40 111 44 L112 71 Q100 74 88 71 Z" fill="${BLUE}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
     <path d="M88 70 Q100 73 112 70" fill="none" stroke="${INK}" stroke-width="2"/>
-    <path d="M90 46 Q82 48 80 58" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>
-    <path d="M90 46 Q82 48 80 58" fill="none" stroke="${BLUE}" stroke-width="3.2" stroke-linecap="round"/>
-    <circle cx="80" cy="58" r="2.6" fill="${SKIN}" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M90 46 Q78 48 74 58" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>
+    <path d="M90 46 Q78 48 74 58" fill="none" stroke="${BLUE}" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="74" cy="58" r="2.6" fill="${SKIN}" stroke="${INK}" stroke-width="1.6"/>
     <rect x="97" y="36" width="6" height="6" fill="${SKIN}"/>
     <circle cx="100" cy="30" r="7.5" fill="${SKIN}" stroke="${INK}" stroke-width="2.2"/>
     <path d="M92.5 29 Q93 21 100 21 Q107.5 21 107.5 29 Q104 25.5 100 25.5 Q96 25.5 92.5 29 Z" fill="${HAIR}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
@@ -193,42 +183,106 @@ const MAN_SVG = `
     <path d="M97.5 34 Q100 35.8 102.5 34" fill="none" stroke="${INK}" stroke-width="1.2" stroke-linecap="round"/>
   </g>`;
 
-// Haus und Boden, bleiben immer stehen.
-const HOUSE_SVG = `
-  <rect x="82" y="12" width="38" height="92" fill="#efe3cf" stroke="${INK}" stroke-width="2.2"/>
-  <rect x="92" y="42" width="22" height="62" fill="#9a6a45" stroke="${INK}" stroke-width="2.2"/>
-  <line x1="0" y1="103.5" x2="120" y2="103.5" stroke="${INK}" stroke-width="2.2"/>`;
+// Hintergrund: Himmel, Haus mit Hintereingang, Hinterhof, Gehweg und Straße.
+const BACKGROUND_SVG = `
+  <rect x="0" y="0" width="1600" height="900" fill="#dcecf7"/>
+  <rect x="1040" y="120" width="560" height="580" fill="#efe3cf" stroke="${INK}" stroke-width="5"/>
+  <path d="M1010 120 L1320 10 L1630 120 Z" fill="#b5573a" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+  <rect x="1090" y="190" width="100" height="100" fill="#bfe0f5" stroke="${INK}" stroke-width="4"/>
+  <rect x="1380" y="190" width="100" height="100" fill="#bfe0f5" stroke="${INK}" stroke-width="4"/>
+  <rect x="1090" y="410" width="90" height="290" fill="#9a6a45" stroke="${INK}" stroke-width="4"/>
+  <rect x="1020" y="560" width="20" height="140" fill="#8d5b3a" stroke="${INK}" stroke-width="4"/>
+  <rect x="0" y="700" width="1040" height="60" fill="#d9d4c7"/>
+  <rect x="1040" y="700" width="560" height="60" fill="#b8d89a"/>
+  <rect x="0" y="760" width="1600" height="140" fill="#5b6068"/>
+  <line x1="0" y1="760" x2="1600" y2="760" stroke="${INK}" stroke-width="5"/>
+  <line x1="0" y1="700" x2="1040" y2="700" stroke="${INK}" stroke-width="3"/>
+  <line x1="0" y1="836" x2="1600" y2="836" stroke="#ffffff" stroke-width="6" stroke-dasharray="60 40" opacity="0.7"/>`;
 
-// Die Tonne wird vom Mann über den Gehweg gerollt, dabei drehen sich die Räder.
-function convoySvg(color) {
+// Die Szene mit allen Tonnen, dem Mann, den Glanzflächen und den Sprechblasen.
+function sceneHtml(infos) {
+  const n = infos.length;
+  const glows = infos
+    .map((b, i) => `<ellipse class="glow" data-i="${i}" cx="${slotX(i)}" cy="${SCENE.GROUND + 6}" rx="150" ry="26" fill="${escapeHtml(b.color)}" opacity="0"/>`)
+    .join("");
+  const bins = infos.map((b, i) => `<g class="bin-g" data-i="${i}">${binSvg(b.color)}</g>`).join("");
+  const labels = infos
+    .map((b, i) => {
+      if (!b.label) return "";
+      return `<g class="label" data-i="${i}" opacity="0" transform="translate(${slotX(i)},${SCENE.GROUND - 270})">
+        <rect x="-150" y="-48" width="300" height="96" rx="26" fill="${escapeHtml(b.color)}" stroke="${INK}" stroke-width="6"/>
+        <text x="0" y="22" text-anchor="middle" font-size="62" font-weight="800" fill="#ffffff" stroke="${INK}" stroke-width="5" paint-order="stroke" font-family="sans-serif">${escapeHtml(b.label)}</text>
+      </g>`;
+    })
+    .join("");
   return `
-    <g class="convoy">
-      <ellipse cx="66" cy="104" rx="16" ry="2.2" fill="${INK}" opacity="0.18"/>
-      <g transform="translate(36,0)">${binSvg(color)}</g>
-      ${MAN_SVG}
-    </g>`;
+    <svg class="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet">
+      <g class="scene-inner">
+        ${BACKGROUND_SVG}
+        ${glows}
+        ${bins}
+        ${labels}
+        <g class="man-wrap">${MAN_SVG}</g>
+      </g>
+    </svg>`;
 }
 
-// Die Szene einer Tonne: Abholung bevorsteht oder heute ist, Mann mit Köder oder schiebend.
-function sceneSvg(name, color) {
-  const type = binType(name);
-  return `
-    <svg class="scene" viewBox="0 0 120 120">
-      ${HOUSE_SVG}
-      <g class="static-set">
-        <ellipse cx="30" cy="104" rx="16" ry="2.2" fill="${INK}" opacity="0.18"/>
-        ${binSvg(color)}
-        <ellipse cx="100" cy="104" rx="11" ry="2" fill="${INK}" opacity="0.18"/>
-        <g class="rod-set">
-          <g class="rod">
-            <line x1="80" y1="58" x2="48" y2="22" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>
-            <g transform="translate(48,22)"><g class="bait">${baitSvg(type)}</g></g>
-          </g>
-        </g>
-        ${MAN_SVG}
-      </g>
-      <g class="convoy-set">${convoySvg(color)}</g>
-    </svg>`;
+// Der Ablauf einer Abholung: der Mann holt Tonnen aus dem Hinterhof und stellt sie an die Straße.
+function buildTimeline(infos) {
+  const n = infos.length;
+  const due = [];
+  infos.forEach((b, i) => {
+    if (b.status === "today" || b.status === "tomorrow") due.push(i);
+  });
+  const segs = [];
+  const placeAt = {};
+  let t = 600;
+  let manX = SCENE.MAN_START;
+  for (const i of due) {
+    const yard = yardX(i, n);
+    const slot = slotX(i);
+    const grab = yard + SCENE.GRAB;
+    const t1 = t + Math.abs(grab - manX) / SCENE.WALK;
+    segs.push({ t0: t, t1, manFrom: manX, manTo: grab, carry: -1 });
+    t = t1 + 350;
+    const t2 = t + Math.abs(slot - yard) / SCENE.PULL;
+    segs.push({ t0: t, t1: t2, manFrom: grab, manTo: slot + SCENE.GRAB, carry: i, binFrom: yard, binTo: slot });
+    t = t2 + 500;
+    placeAt[i] = t2;
+    manX = slot + SCENE.GRAB;
+  }
+  const holdEnd = t + 3000;
+  return { segs, placeAt, holdEnd, cycle: holdEnd + 700, n };
+}
+
+// Zustand aller Figuren zu einem Zeitpunkt der Animation.
+function sceneAt(tl, time) {
+  const bins = [];
+  for (let i = 0; i < tl.n; i++) bins.push({ x: yardX(i, tl.n), placed: false });
+  let manX = SCENE.MAN_START;
+  let moving = false;
+  for (const seg of tl.segs) {
+    if (time >= seg.t1) {
+      manX = seg.manTo;
+      if (seg.carry >= 0) bins[seg.carry].x = seg.binTo;
+      continue;
+    }
+    if (time >= seg.t0) {
+      const p = (time - seg.t0) / (seg.t1 - seg.t0);
+      manX = seg.manFrom + (seg.manTo - seg.manFrom) * p;
+      moving = seg.manTo !== seg.manFrom;
+      if (seg.carry >= 0) bins[seg.carry].x = seg.binFrom + (seg.binTo - seg.binFrom) * p;
+    }
+    break;
+  }
+  for (const key of Object.keys(tl.placeAt)) {
+    const i = Number(key);
+    if (time >= tl.placeAt[i]) {
+      bins[i].placed = true;
+      bins[i].x = slotX(i);
+    }
+  }
+  return { manX, moving, bins };
 }
 
 class LutarymWasteCollectionCard extends HTMLElement {
@@ -236,6 +290,8 @@ class LutarymWasteCollectionCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._signature = null;
+    this._raf = null;
+    this._els = null;
   }
 
   setConfig(config) {
@@ -283,7 +339,15 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 2;
+    return this._config && this._config.style === "mann" ? 4 : 2;
+  }
+
+  connectedCallback() {
+    if (this._els && this._tl) this._startAnim();
+  }
+
+  disconnectedCallback() {
+    this._stopAnim();
   }
 
   static getConfigElement() {
@@ -307,15 +371,67 @@ class LutarymWasteCollectionCard extends HTMLElement {
     };
   }
 
+  _stopAnim() {
+    if (this._raf) cancelAnimationFrame(this._raf);
+    this._raf = null;
+  }
+
+  _startAnim() {
+    this._stopAnim();
+    if (!this._els || !this._tl) return;
+    const tl = this._tl;
+    if (!this._config.animate || tl.segs.length === 0) {
+      this._update(tl.holdEnd);
+      return;
+    }
+    this._t0 = performance.now();
+    const loop = (now) => {
+      this._update((now - this._t0) % tl.cycle);
+      this._raf = requestAnimationFrame(loop);
+    };
+    this._raf = requestAnimationFrame(loop);
+  }
+
+  _update(time) {
+    const els = this._els;
+    const tl = this._tl;
+    if (!els || !tl) return;
+    const st = sceneAt(tl, time);
+    const bob = st.moving ? Math.abs(Math.sin(time * 0.025)) * 5 : 0;
+    els.man.setAttribute(
+      "transform",
+      `translate(${st.manX},${SCENE.GROUND - bob}) scale(${SCENE.SCALE}) translate(-100,-103.5)`
+    );
+    st.bins.forEach((bin, i) => {
+      const el = els.bins[i];
+      if (el) {
+        el.setAttribute("transform", `translate(${bin.x},${SCENE.GROUND}) scale(${SCENE.SCALE}) translate(-30,-103.5)`);
+        const deg = ((bin.x - yardX(i, tl.n)) / (SCENE.SCALE * 2.6)) * (180 / Math.PI);
+        els.wl[i].setAttribute("transform", `rotate(${deg} 22 101)`);
+        els.wr[i].setAttribute("transform", `rotate(${deg} 38 101)`);
+      }
+      if (els.glows[i]) {
+        els.glows[i].setAttribute("opacity", bin.placed ? (0.35 + 0.25 * Math.sin(time * 0.008)).toFixed(3) : "0");
+      }
+      if (els.labels[i]) {
+        els.labels[i].setAttribute("opacity", bin.placed ? "1" : "0");
+      }
+    });
+    let alpha = 1;
+    if (time > tl.holdEnd) alpha = Math.max(0, 1 - (time - tl.holdEnd) / 700);
+    els.inner.setAttribute("opacity", alpha.toFixed(3));
+  }
+
   _render() {
     if (!this._config) return;
     if (!this._config.demo && !this._hass) return;
+    this._stopAnim();
 
     const cfg = this._config;
     const mann = cfg.style === "mann";
     const fullDate = { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" };
 
-    const tiles = cfg.bins.map((bin, index) => {
+    const infos = cfg.bins.map((bin, index) => {
       const stateObj = this._hass ? this._hass.states[bin.entity] : undefined;
       const name =
         bin.name ||
@@ -344,46 +460,49 @@ class LutarymWasteCollectionCard extends HTMLElement {
       const day = date ? String(date.getDate()).padStart(2, "0") : "?";
       const month = date ? date.toLocaleDateString("de-DE", { month: "short" }).replace(".", "") : "";
       const badgeText = status === "today" ? "Heute" : status === "tomorrow" ? "Morgen" : "";
-      const bubbleText = status === "today" ? "Heute!" : status === "tomorrow" ? "Morgen!" : "";
+      const label = cfg.show_badges && badgeText ? (status === "today" ? "Heute!" : "Morgen!") : "";
+      const dateText = date ? date.toLocaleDateString("de-DE", fullDate) : "kein Termin";
 
-      const dateLine = cfg.show_dates
-        ? `<div class="bin-date">${escapeHtml(date ? date.toLocaleDateString("de-DE", fullDate) : "kein Termin")}</div>`
-        : "";
-      const nameLine = `<div class="bin-name">${escapeHtml(name)}</div>`;
-
-      if (mann) {
-        const bubble = cfg.show_badges && bubbleText ? `<div class="bubble">${bubbleText}</div>` : "";
-        const speed = status === "today" ? `<div class="speed"></div>` : "";
-        return `
-          <div class="tile mann-tile ${animated}" style="--c:${escapeHtml(color)}">
-            <div class="stage">
-              ${speed}
-              ${bubble}
-              ${sceneSvg(name, color)}
-            </div>
-            <div class="shadow"></div>
-            ${nameLine}
-            ${dateLine}
-          </div>`;
-      }
-
-      return `
-        <div class="tile ${animated}" style="--c:${escapeHtml(color)}">
-          <div class="glass">
-            <div class="gloss"></div>
-            <div class="band">${escapeHtml(month)}</div>
-            <div class="wk">${escapeHtml(weekday)}</div>
-            <div class="day">${escapeHtml(day)}</div>
-            ${cfg.show_badges && badgeText ? `<div class="badge">${badgeText}</div>` : ""}
-          </div>
-          <div class="shadow"></div>
-          ${nameLine}
-          ${dateLine}
-        </div>`;
+      return { name, color, status, animated, weekday, day, month, badgeText, label, dateText, date };
     });
 
     const titleText = cfg.demo ? `${cfg.title || ""} (Demo)`.trim() : cfg.title;
     const title = titleText ? `<div class="title">${escapeHtml(titleText)}</div>` : "";
+
+    let body;
+    if (mann) {
+      this._infos = infos;
+      this._tl = buildTimeline(infos);
+      const legend = infos
+        .map(
+          (b) => `
+          <div class="legend-item">
+            <span class="chip" style="background:${escapeHtml(b.color)}"></span>
+            <span class="legend-name">${escapeHtml(b.name)}</span>
+            ${cfg.show_dates ? `<span class="legend-date">${escapeHtml(b.dateText)}</span>` : ""}
+          </div>`
+        )
+        .join("");
+      body = `
+        <div class="scene-wrap">${sceneHtml(infos)}</div>
+        <div class="legend">${legend}</div>`;
+    } else {
+      this._tl = null;
+      const tiles = infos.map((b) => `
+        <div class="tile ${b.animated}" style="--c:${escapeHtml(b.color)}">
+          <div class="glass">
+            <div class="gloss"></div>
+            <div class="band">${escapeHtml(b.month)}</div>
+            <div class="wk">${escapeHtml(b.weekday)}</div>
+            <div class="day">${escapeHtml(b.day)}</div>
+            ${cfg.show_badges && b.badgeText ? `<div class="badge">${b.badgeText}</div>` : ""}
+          </div>
+          <div class="shadow"></div>
+          <div class="bin-name">${escapeHtml(b.name)}</div>
+          ${cfg.show_dates ? `<div class="bin-date">${escapeHtml(b.dateText)}</div>` : ""}
+        </div>`);
+      body = `<div class="tiles">${tiles.join("")}</div>`;
+    }
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -408,7 +527,27 @@ class LutarymWasteCollectionCard extends HTMLElement {
           align-items: center;
           width: 124px;
         }
+        .bin-name {
+          margin-top: 4px;
+          font-weight: 700;
+          color: var(--primary-text-color);
+          text-align: center;
+        }
+        .bin-date {
+          font-size: 0.82em;
+          color: var(--secondary-text-color);
+          text-align: center;
+        }
+        .shadow {
+          width: 84px;
+          height: 10px;
+          margin-top: 6px;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.18);
+          filter: blur(3px);
+        }
 
+        /* Die Glaskarte */
         /* Die Glaskarte */
         .glass {
           position: relative;
@@ -472,25 +611,6 @@ class LutarymWasteCollectionCard extends HTMLElement {
           background: var(--c);
           white-space: nowrap;
         }
-        .shadow {
-          width: 84px;
-          height: 10px;
-          margin-top: 6px;
-          border-radius: 50%;
-          background: rgba(0, 0, 0, 0.18);
-          filter: blur(3px);
-        }
-        .bin-name {
-          margin-top: 4px;
-          font-weight: 700;
-          color: var(--primary-text-color);
-          text-align: center;
-        }
-        .bin-date {
-          font-size: 0.82em;
-          color: var(--secondary-text-color);
-          text-align: center;
-        }
 
         /* Glaskarte, Zustand: ohne Termin */
         .none .glass { animation: floatCalm 6s ease-in-out infinite; }
@@ -514,78 +634,46 @@ class LutarymWasteCollectionCard extends HTMLElement {
           pointer-events: none;
         }
 
-        /* Mann mit Tonnen */
-        .stage {
+        /* Mann mit Tonnen: 16:9 Szene mit Hinterhof, Haus und Straße */
+        .scene-wrap {
           position: relative;
-          width: 112px;
-          height: 112px;
-          margin: 0 auto;
+          width: 100%;
+          aspect-ratio: 16 / 9;
+          border-radius: 14px;
+          overflow: hidden;
+          box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35);
         }
         .scene {
-          width: 112px;
-          height: 112px;
+          width: 100%;
+          height: 100%;
           display: block;
-          overflow: visible;
         }
-        .scene * { transform-box: view-box; }
-        .bin-anim { transform-origin: 30px 103px; }
-        .lid { transform-origin: 18px 53px; }
-        .wheel-l { transform-origin: 22px 101px; }
-        .wheel-r { transform-origin: 38px 101px; }
-        .rod { transform-origin: 80px 58px; }
-        .convoy-set { display: none; }
-        .rod-set { display: none; }
-
-        /* Zustand: ohne Termin, der Mann wartet, die Tonne steht am Haus */
-        .none .static-set .bin-anim { animation: binIdle 6s ease-in-out infinite; }
-        .none .static-set .man { animation: manWait 4s ease-in-out infinite; }
-
-        /* Zustand: einen Tag vorher, der Mann angelt, die Tonne hüpft zum Köder */
-        .tomorrow .rod-set { display: block; }
-        .tomorrow .static-set .bin-anim { animation: binCome 2.2s ease-in-out infinite; }
-        .tomorrow .static-set .lid { animation: lidAjar 1.1s ease-in-out infinite; }
-        .tomorrow .static-set .rod { animation: rodSwing 1.8s ease-in-out infinite; }
-        .tomorrow .static-set .man { animation: manWait 1.8s ease-in-out infinite; }
-
-        /* Zustand: Abholtag, der Mann rollt die Tonne an den Rand */
-        .today .static-set { display: none; }
-        .today .convoy-set { display: block; }
-        .today .convoy { animation: convoyRoll 2.6s ease-in-out infinite; }
-        .today .convoy .bin-anim { animation: binThud 2.6s ease-in-out infinite; }
-        .today .convoy .wheel { animation: wheelSpin 2.6s ease-in-out infinite; }
-        .today .convoy .man { animation: manPush 0.6s ease-in-out infinite; }
-
-        .bubble {
-          display: none;
-          position: absolute;
-          top: -2px;
-          right: -6px;
-          z-index: 2;
-          padding: 2px 9px;
-          border: 3px solid ${INK};
-          border-radius: 14px;
-          background: #ffffff;
-          color: ${INK};
-          font-size: 12px;
-          font-weight: 800;
-          white-space: nowrap;
-          box-shadow: 2px 2px 0 ${INK};
+        .legend {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px 16px;
+          margin-top: 12px;
+          font-size: 0.9em;
         }
-        .mann-tile.tomorrow .bubble,
-        .mann-tile.today .bubble { display: block; animation: pop 0.6s ease-out; }
-        .mann-tile.today .bubble { background: #ffd23f; left: 0; right: auto; top: 0; }
-
-        .speed {
-          display: none;
-          position: absolute;
-          left: -8px;
-          top: 40px;
-          width: 22px;
-          height: 50px;
-          background: repeating-linear-gradient(to bottom, ${INK} 0 3px, transparent 3px 12px);
-          z-index: 1;
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
-        .mann-tile.today .speed { display: block; animation: speedFlash 0.7s ease-in-out infinite; }
+        .legend-name {
+          font-weight: 700;
+          color: var(--primary-text-color);
+        }
+        .legend-date {
+          color: var(--secondary-text-color);
+        }
+        .chip {
+          display: inline-block;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          border: 1.5px solid ${INK};
+        }
 
         @keyframes floatCalm {
           0%, 100% { transform: translateY(0) rotateX(6deg) rotateY(-6deg); }
@@ -615,67 +703,28 @@ class LutarymWasteCollectionCard extends HTMLElement {
           0%, 100% { opacity: 0.2; }
           50% { opacity: 0.55; }
         }
-
-        @keyframes binIdle {
-          0%, 100% { transform: rotate(0deg) translateY(0); }
-          50% { transform: rotate(1.5deg) translateY(-1px); }
-        }
-        @keyframes binCome {
-          0%, 100% { transform: translate(0, 0) scale(1, 1); }
-          25% { transform: translate(6px, -12px) rotate(-6deg); }
-          45% { transform: translate(12px, 0) scale(1.06, 0.94); }
-          65% { transform: translate(12px, -2px) rotate(3deg); }
-          85% { transform: translate(0, 0) scale(1, 1); }
-        }
-        @keyframes lidAjar {
-          0%, 100% { transform: rotate(-10deg); }
-          50% { transform: rotate(-18deg); }
-        }
-        @keyframes rodSwing {
-          0%, 100% { transform: rotate(-10deg); }
-          50% { transform: rotate(10deg); }
-        }
-        @keyframes manWait {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-1.5px); }
-        }
-        @keyframes convoyRoll {
-          0% { transform: translateX(0); opacity: 0; }
-          8% { transform: translateX(0); opacity: 1; }
-          62% { transform: translateX(-36px); opacity: 1; }
-          80% { transform: translateX(-36px); opacity: 1; }
-          90%, 100% { transform: translateX(-36px); opacity: 0; }
-        }
-        @keyframes binThud {
-          0%, 58%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
-          64% { transform: translate(0, -3px) rotate(-3deg) scale(1, 1); }
-          70% { transform: translate(0, 0) rotate(0deg) scale(1.04, 0.96); }
-          76% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
-        }
-        @keyframes wheelSpin {
-          0% { transform: rotate(0deg); }
-          60% { transform: rotate(1080deg); }
-          100% { transform: rotate(1080deg); }
-        }
-        @keyframes manPush {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-1.5px); }
-        }
-        @keyframes pop {
-          0% { transform: scale(0.4); opacity: 0; }
-          70% { transform: scale(1.1); opacity: 1; }
-          100% { transform: scale(1); }
-        }
-        @keyframes speedFlash {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
-        }
       </style>
       <ha-card>
         ${title}
-        <div class="tiles">${tiles.join("")}</div>
+        ${body}
       </ha-card>
     `;
+
+    if (mann) {
+      const root = this.shadowRoot;
+      this._els = {
+        man: root.querySelector(".man-wrap"),
+        inner: root.querySelector(".scene-inner"),
+        bins: infos.map((_, i) => root.querySelector(`.bin-g[data-i="${i}"]`)),
+        wl: infos.map((_, i) => root.querySelector(`.bin-g[data-i="${i}"] .wheel-l`)),
+        wr: infos.map((_, i) => root.querySelector(`.bin-g[data-i="${i}"] .wheel-r`)),
+        glows: infos.map((_, i) => root.querySelector(`.glow[data-i="${i}"]`)),
+        labels: infos.map((_, i) => root.querySelector(`.label[data-i="${i}"]`)),
+      };
+      this._startAnim();
+    } else {
+      this._els = null;
+    }
   }
 }
 
