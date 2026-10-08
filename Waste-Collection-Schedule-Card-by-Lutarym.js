@@ -11,6 +11,10 @@
  * - Am Abholtag: der Mann rollt die Tonne auf ihren Rädern an den Rand.
  *   Dort landet sie mit einem kleinen Ruck.
  *
+ * Version 2.6.1: Comic-Szene ohne Sprechblasen, die Farbe der Tonne zeigt die Abholung.
+ * Version 2.6.0: Darstellung "Mann mit Tonnen" als Comic-Szene (SVG) mit realistischen Größen, ohne three.js.
+ * Version 2.5.1: Darstellung "Mann mit Tonnen" kompakter, maximale Breite 300 px.
+ * Version 2.5.0: Darstellung "Mann mit Tonnen" als 3D-Szene mit three.js.
  * Version 2.3.0: Darstellung "Mann mit Tonnen" mit realistischen Größenverhältnissen und Tonne auf Rädern.
  * Version 2.2.0: Darstellung "Mann mit Tonnen" ersetzt die Comic-Figuren (Version 2.1.0).
  * Version 2.1.0: Darstellung "Comic-Tonnen" mit Figuren für jede Tonne.
@@ -32,7 +36,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "2.5.0";
+const CARD_VERSION = "2.6.1";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
@@ -125,7 +129,7 @@ const SCENE = {
   YARD_TO: 1500,      // letzte Position im Hinterhof
   SLOT_FROM: 170,     // erster Platz an der Straße
   SLOT_STEP: 200,     // Abstand der Plätze an der Straße
-  GRAB: 84,           // Abstand Mann zur Tonnenmitte beim Greifen
+  GRAB: 96,           // Abstand Mann zur Tonnenmitte beim Greifen
   WALK: 0.42,         // Gehgeschwindigkeit in Einheiten pro Millisekunde
   PULL: 0.28,         // Ziehgeschwindigkeit der Tonne
 };
@@ -139,285 +143,152 @@ function slotX(i) {
   return SCENE.SLOT_FROM + i * SCENE.SLOT_STEP;
 }
 
-// Three.js wird beim ersten Bedarf von jsDelivr geladen.
-const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js";
-let threeModulePromise = null;
+// Comic-Szene als SVG. Maßstab: der Mann ist etwa 300 Einheiten groß, die Tonne etwa 176.
+const GROUND_Y = 700;
 
-function loadThree() {
-  if (!threeModulePromise) {
-    threeModulePromise = import(THREE_URL).catch((err) => {
-      threeModulePromise = null;
-      throw err;
-    });
+function starPoints(outer, inner, spikes) {
+  const pts = [];
+  for (let k = 0; k < spikes * 2; k++) {
+    const r = k % 2 === 0 ? outer : inner;
+    const a = (Math.PI / spikes) * k - Math.PI / 2;
+    pts.push(`${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`);
   }
-  return threeModulePromise;
+  return pts.join(" ");
 }
 
-// Welt in Metern: 100 Szene-Einheiten entsprechen 1 Welt-Einheit. Mitte der Straße bei x = 0.
-const WORLD_X = (x) => (x - 800) / 100;
-const SLOT_Z = 1.7;   // Abstellplatz an der Straße
-const YARD_Z = 0.2;   // Abstellplatz im Hinterhof
-const MAN_Z = 0.6;    // Standplatz des Mannes
+const HOUSE_2D = `
+  <rect x="1040" y="150" width="560" height="550" fill="#f2e2c4" stroke="${INK}" stroke-width="10"/>
+  <rect x="1040" y="150" width="60" height="550" fill="#e3cca6"/>
+  <polygon points="1010,150 1320,40 1630,150" fill="#d9644a" stroke="${INK}" stroke-width="10" stroke-linejoin="round"/>
+  <rect x="1100" y="220" width="130" height="120" fill="#9fd3ee" stroke="${INK}" stroke-width="8"/>
+  <path d="M1165 220 V340 M1100 280 H1230" stroke="${INK}" stroke-width="6"/>
+  <rect x="1370" y="220" width="130" height="120" fill="#9fd3ee" stroke="${INK}" stroke-width="8"/>
+  <path d="M1435 220 V340 M1370 280 H1500" stroke="${INK}" stroke-width="6"/>
+  <rect x="1090" y="430" width="100" height="270" fill="#a0683e" stroke="${INK}" stroke-width="8"/>
+  <rect x="1018" y="520" width="24" height="180" fill="#8d5b3a" stroke="${INK}" stroke-width="6"/>
+  <rect x="0" y="700" width="1040" height="60" fill="#e4dccb"/>
+  <rect x="1040" y="700" width="560" height="60" fill="#b9dc8c"/>
+  <rect x="0" y="760" width="1600" height="140" fill="#5c6370"/>
+  <line x1="0" y1="760" x2="1600" y2="760" stroke="${INK}" stroke-width="10"/>
+  <line x1="0" y1="700" x2="1600" y2="700" stroke="${INK}" stroke-width="8"/>
+  <line x1="0" y1="836" x2="1600" y2="836" stroke="#ffffff" stroke-width="8" stroke-dasharray="60 40" opacity="0.8"/>`;
 
-function matFor(THREE, color, roughness) {
-  return new THREE.MeshStandardMaterial({ color, roughness: roughness === undefined ? 0.6 : roughness });
+// Der Mann in Comic-Stil. Ursprung: Mitte der Füße. Pivot-Punkte für Beine und Arme liegen oben.
+function manMarkup() {
+  const shoe = "#222222";
+  return `
+    <g class="man-g" transform="translate(0,${GROUND_Y})">
+      <ellipse cx="0" cy="4" rx="58" ry="10" fill="${INK}" opacity="0.18"/>
+      <g class="legL" transform="translate(-14,-132)">
+        <rect x="-12" y="0" width="24" height="132" rx="10" fill="${TROUSERS}" stroke="${INK}" stroke-width="6"/>
+        <ellipse cx="6" cy="132" rx="22" ry="10" fill="${shoe}"/>
+      </g>
+      <g class="legR" transform="translate(14,-132)">
+        <rect x="-12" y="0" width="24" height="132" rx="10" fill="${TROUSERS}" stroke="${INK}" stroke-width="6"/>
+        <ellipse cx="6" cy="132" rx="22" ry="10" fill="${shoe}"/>
+      </g>
+      <path d="M-38 -222 Q0 -234 38 -222 L32 -132 L-32 -132 Z" fill="${BLUE}" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/>
+      <rect x="-9" y="-240" width="18" height="18" fill="${SKIN}" stroke="${INK}" stroke-width="5"/>
+      <circle cx="0" cy="-262" r="25" fill="${SKIN}" stroke="${INK}" stroke-width="7"/>
+      <path d="M-26 -264 Q-24 -292 0 -290 Q24 -292 26 -264 Q14 -276 0 -276 Q-14 -276 -26 -264 Z" fill="${HAIR}" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="-9" cy="-262" r="3" fill="${INK}"/>
+      <circle cx="9" cy="-262" r="3" fill="${INK}"/>
+      <path d="M-8 -249 Q0 -242 8 -249" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+      <g class="armL" transform="translate(-38,-214)">
+        <rect x="-10" y="0" width="20" height="92" rx="10" fill="${BLUE}" stroke="${INK}" stroke-width="6"/>
+        <circle cx="0" cy="96" r="12" fill="${SKIN}" stroke="${INK}" stroke-width="5"/>
+      </g>
+      <g class="armR" transform="translate(38,-214)">
+        <rect x="-10" y="0" width="20" height="92" rx="10" fill="${BLUE}" stroke="${INK}" stroke-width="6"/>
+        <circle cx="0" cy="96" r="12" fill="${SKIN}" stroke="${INK}" stroke-width="5"/>
+      </g>
+    </g>`;
 }
 
-function addBox(THREE, parent, w, h, d, color, x, y, z, cast) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matFor(THREE, color, 0.8));
-  mesh.position.set(x, y, z);
-  mesh.castShadow = Boolean(cast);
-  mesh.receiveShadow = true;
-  parent.add(mesh);
-  return mesh;
+// Die Tonne auf Rädern, Boden bei y = 0, Mitte bei x = 0. Etwa 176 Einheiten hoch.
+function binMarkup(i, color) {
+  const c = escapeHtml(color);
+  const dark = escapeHtml(shadeOf(color, 0.3));
+  const light = escapeHtml(mixHex(color, "#ffffff", 0.25));
+  return `
+    <g class="bin-g" data-i="${i}" transform="translate(0,${GROUND_Y})">
+      <ellipse cx="0" cy="2" rx="56" ry="9" fill="${INK}" opacity="0.18"/>
+      <rect x="-46" y="-158" width="92" height="158" rx="10" fill="${c}" stroke="${INK}" stroke-width="7"/>
+      <rect x="28" y="-150" width="14" height="142" rx="6" fill="${dark}" opacity="0.6"/>
+      <rect x="-24" y="-112" width="48" height="26" rx="3" fill="#ffffff" stroke="${INK}" stroke-width="4"/>
+      <rect x="-52" y="-176" width="104" height="22" rx="8" fill="${light}" stroke="${INK}" stroke-width="7"/>
+      <g class="wl" data-i="${i}" transform="rotate(0 -30 -8)">
+        <circle cx="-30" cy="-8" r="10" fill="${INK}"/>
+        <line x1="-30" y1="-14" x2="-30" y2="-2" stroke="#ffffff" stroke-width="3"/>
+      </g>
+      <g class="wr" data-i="${i}" transform="rotate(0 30 -8)">
+        <circle cx="30" cy="-8" r="10" fill="${INK}"/>
+        <line x1="30" y1="-14" x2="30" y2="-2" stroke="#ffffff" stroke-width="3"/>
+      </g>
+    </g>`;
 }
 
-// Die Mülltonne auf Rädern, Mitte am Boden, Vorderseite zeigt nach +z.
-function buildBin(THREE, color) {
-  const group = new THREE.Group();
-  addBox(THREE, group, 0.6, 0.8, 0.66, color, 0, 0.5, 0, true);
-  addBox(THREE, group, 0.64, 0.12, 0.7, mixHex(color, "#ffffff", 0.2), 0, 0.96, 0, true);
-  addBox(THREE, group, 0.3, 0.2, 0.01, "#ffffff", 0, 0.55, 0.335, false);
-  const wheelGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.05, 14);
-  wheelGeo.rotateX(Math.PI / 2);
-  const wheelMat = matFor(THREE, "#222222", 0.5);
-  const wheels = [-0.22, 0.22].map((x) => {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.position.set(x, 0.07, -0.28);
-    w.castShadow = true;
-    group.add(w);
-    return w;
-  });
-  const glowGeo = new THREE.CircleGeometry(0.75, 32);
-  glowGeo.rotateX(-Math.PI / 2);
-  const glow = new THREE.Mesh(
-    glowGeo,
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false })
-  );
-  glow.position.set(0, 0.02, 0);
-  group.add(glow);
-  return { group, wheels, glow };
+// Der Comic-Stern hinter einer Tonne, die an der Straße steht, in der Farbe der Tonne.
+function burstMarkup(i, color) {
+  return `
+    <g class="burst" data-i="${i}" opacity="0" transform="translate(${slotX(i)},600)">
+      <polygon points="${starPoints(150, 108, 12)}" fill="${escapeHtml(color)}" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/>
+    </g>`;
 }
 
-// Der Mann aus einfachen Formen, etwa 1,9 Meter groß. Beine und Arme sind drehbar.
-function buildMan(THREE) {
-  const group = new THREE.Group();
-  const skin = matFor(THREE, SKIN, 0.6);
-  const blue = matFor(THREE, BLUE, 0.7);
-  const trousers = matFor(THREE, TROUSERS, 0.7);
-  const hair = matFor(THREE, HAIR, 0.8);
-  const shoe = matFor(THREE, "#222222", 0.6);
+// Baut die Comic-Szene in den Container und liefert update und dispose.
+function build2D(infos, wrap) {
+  const uid = "c" + Math.random().toString(36).slice(2, 8);
+  const parts = [];
+  parts.push(`<defs><pattern id="dots-${uid}" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="7" cy="7" r="2.4" fill="${INK}" opacity="0.14"/></pattern></defs>`);
+  parts.push(`<rect width="1600" height="900" fill="#f7f1e3"/>`);
+  parts.push(`<rect width="1600" height="640" fill="url(#dots-${uid})"/>`);
+  parts.push(HOUSE_2D);
+  infos.forEach((b, i) => parts.push(burstMarkup(i, b.color)));
+  infos.forEach((b, i) => parts.push(binMarkup(i, b.color)));
+  parts.push(manMarkup());
+  parts.push(`<rect x="6" y="6" width="1588" height="888" fill="none" stroke="${INK}" stroke-width="14"/>`);
 
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.62, 0.26), blue);
-  torso.position.set(0, 1.25, 0);
-  torso.castShadow = true;
-  group.add(torso);
-
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 12), skin);
-  neck.position.set(0, 1.6, 0);
-  group.add(neck);
-
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 20, 16), skin);
-  head.position.set(0, 1.76, 0);
-  head.castShadow = true;
-  group.add(head);
-
-  const hairMesh = new THREE.Mesh(new THREE.SphereGeometry(0.163, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), hair);
-  hairMesh.position.set(0, 1.78, -0.01);
-  group.add(hairMesh);
-
-  for (const x of [-0.05, 0.05]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), shoe);
-    eye.position.set(x, 1.77, 0.14);
-    group.add(eye);
-  }
-
-  const legs = [-0.11, 0.11].map((x) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(x, 0.95, 0);
-    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.7, 4, 10), trousers);
-    leg.position.set(0, -0.44, 0);
-    leg.castShadow = true;
-    pivot.add(leg);
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.26), shoe);
-    foot.position.set(0, -0.9, 0.04);
-    foot.castShadow = true;
-    pivot.add(foot);
-    group.add(pivot);
-    return pivot;
-  });
-
-  const arms = [-0.3, 0.3].map((x) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(x, 1.5, 0);
-    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.45, 4, 10), blue);
-    arm.position.set(0, -0.29, 0);
-    arm.castShadow = true;
-    pivot.add(arm);
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), skin);
-    hand.position.set(0, -0.6, 0);
-    pivot.add(hand);
-    group.add(pivot);
-    return pivot;
-  });
-
-  return { group, legL: legs[0], legR: legs[1], armL: arms[0], armR: arms[1] };
-}
-
-// Straße, Gehweg, Hinterhof und Haus.
-function buildWorld(THREE, scene) {
-  addBox(THREE, scene, 10.4, 0.1, 1.2, "#d9d4c7", -2.8, -0.05, 1.6);
-  addBox(THREE, scene, 5.6, 0.1, 2.6, "#b8d89a", 5.2, -0.05, -0.3);
-  addBox(THREE, scene, 16, 0.1, 8, "#5b6068", 0, -0.05, 6.2);
-  addBox(THREE, scene, 16, 0.14, 0.12, "#c9c9c9", 0, 0.07, 2.2);
-  for (let x = -7.5; x < 8; x += 1.2) {
-    addBox(THREE, scene, 0.6, 0.01, 0.08, "#ffffff", x, 0.003, 4.6);
-  }
-
-  addBox(THREE, scene, 5.6, 4.6, 2.4, "#efe3cf", 5.2, 2.3, -1.2, true);
-  const roofGeo = new THREE.ConeGeometry(4.2, 2.2, 4);
-  roofGeo.rotateY(Math.PI / 4);
-  const roof = new THREE.Mesh(roofGeo, matFor(THREE, "#b5573a", 0.7));
-  roof.position.set(5.2, 5.7, -1.2);
-  roof.castShadow = true;
-  scene.add(roof);
-  addBox(THREE, scene, 0.9, 0.9, 0.05, "#bfe0f5", 3.4, 3.0, 0.01, false);
-  addBox(THREE, scene, 0.9, 0.9, 0.05, "#bfe0f5", 6.3, 3.0, 0.01, false);
-  addBox(THREE, scene, 0.9, 2.6, 0.06, "#9a6a45", 3.35, 1.3, 0.02, false);
-  addBox(THREE, scene, 0.2, 1.4, 0.2, "#8d5b3a", 2.3, 0.7, 0.5, true);
-}
-
-function makeLabelSprite(THREE, text, color) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 160;
-  const ctx = canvas.getContext("2d");
-  const r = 36;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(r, 0);
-  ctx.arcTo(512, 0, 512, 160, r);
-  ctx.arcTo(512, 160, 0, 160, r);
-  ctx.arcTo(0, 160, 0, 0, r);
-  ctx.arcTo(0, 0, 512, 0, r);
-  ctx.closePath();
-  ctx.fill();
-  ctx.lineWidth = 12;
-  ctx.strokeStyle = INK;
-  ctx.stroke();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 88px sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, 256, 84);
-  const texture = new THREE.CanvasTexture(canvas);
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }));
-  sprite.scale.set(1.6, 0.5, 1);
-  sprite.visible = false;
-  return sprite;
-}
-
-// Baut die 3D-Szene in den Container und liefert eine update-Funktion und dispose.
-function build3D(THREE, infos, wrap) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
-  renderer.domElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;";
-  wrap.insertBefore(renderer.domElement, wrap.firstChild);
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#dcecf7");
-  const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
-  camera.position.set(0, 5, 16);
-  camera.lookAt(0, 2.7, 0.5);
-
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x6b7a88, 1.4));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(-4, 9, 8);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.camera.left = -9;
-  sun.shadow.camera.right = 9;
-  sun.shadow.camera.top = 8;
-  sun.shadow.camera.bottom = -4;
-  sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 30;
-  scene.add(sun);
-  scene.add(sun.target);
-
-  buildWorld(THREE, scene);
-
-  const bins = infos.map((b) => {
-    const bin = buildBin(THREE, b.color);
-    scene.add(bin.group);
-    bin.label = makeLabelSprite(THREE, b.label || "", b.color);
-    bin.label.position.set(0, 1.55, 0);
-    bin.group.add(bin.label);
-    bin.group.add(bin.glow);
-    return bin;
-  });
-
-  const man = buildMan(THREE);
-  scene.add(man.group);
-
-  const resize = () => {
-    const w = wrap.clientWidth || 640;
-    const h = wrap.clientHeight || 360;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+  wrap.insertAdjacentHTML("afterbegin", `<svg class="comic" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet">${parts.join("")}</svg>`);
+  const root = wrap.querySelector("svg.comic");
+  const q = (sel) => root.querySelector(sel);
+  const n = infos.length;
+  const els = {
+    man: q(".man-g"),
+    legL: q(".legL"),
+    legR: q(".legR"),
+    armL: q(".armL"),
+    armR: q(".armR"),
+    bins: infos.map((_, i) => q(`.bin-g[data-i="${i}"]`)),
+    wl: infos.map((_, i) => q(`.wl[data-i="${i}"]`)),
+    wr: infos.map((_, i) => q(`.wr[data-i="${i}"]`)),
+    bursts: infos.map((_, i) => q(`.burst[data-i="${i}"]`)),
   };
-  const observer = new ResizeObserver(resize);
-  observer.observe(wrap);
-  resize();
 
-  const update = (st, time, alpha) => {
-    const n = infos.length;
-    const carrying = st.carry;
-    const carryZ = carrying ? YARD_Z + (SLOT_Z - YARD_Z) * carrying.p : YARD_Z;
-    const bob = st.moving ? Math.abs(Math.sin(time * 0.025)) * 0.05 : 0;
-    const swing = st.moving ? Math.sin(time * 0.012) * 0.6 : 0;
-    man.group.position.set(WORLD_X(st.manX), bob, carrying ? carryZ + 0.6 : MAN_Z);
-    man.legL.rotation.x = swing;
-    man.legR.rotation.x = -swing;
-    man.armL.rotation.z = carrying ? -1.2 : 0;
-    man.armL.rotation.x = carrying ? 0 : -swing * 0.4;
-    man.armR.rotation.x = carrying ? -0.4 : swing * 0.5;
+  const update = (st, time) => {
+    const bob = st.moving ? Math.abs(Math.sin(time * 0.02)) * 8 : 0;
+    els.man.setAttribute("transform", `translate(${st.manX.toFixed(1)},${(GROUND_Y - bob).toFixed(1)})`);
+    const swing = st.moving ? Math.sin(time * 0.012) : 0;
+    const carrying = Boolean(st.carry);
+    els.legL.setAttribute("transform", `translate(-14,-132) rotate(${(swing * 22).toFixed(2)})`);
+    els.legR.setAttribute("transform", `translate(14,-132) rotate(${(-swing * 22).toFixed(2)})`);
+    els.armL.setAttribute("transform", `translate(-38,-214) rotate(${carrying ? 70 : (-swing * 18).toFixed(2)})`);
+    els.armR.setAttribute("transform", `translate(38,-214) rotate(${carrying ? 20 : (swing * 18).toFixed(2)})`);
 
     st.bins.forEach((bin, i) => {
-      const part = bins[i];
-      if (!part) return;
-      let z = YARD_Z;
-      if (bin.placed) z = SLOT_Z;
-      else if (carrying && carrying.i === i) z = carryZ;
-      part.group.position.set(WORLD_X(bin.x), 0, z);
-      const dist = (bin.x - yardX(i, n)) / 100;
-      part.wheels.forEach((w) => {
-        w.rotation.z = -dist / 0.07;
-      });
-      part.glow.material.opacity = bin.placed ? 0.35 + 0.25 * Math.sin(time * 0.008) : 0;
-      part.label.visible = bin.placed && Boolean(infos[i].label);
+      const g = els.bins[i];
+      if (!g) return;
+      g.setAttribute("transform", `translate(${bin.x.toFixed(1)},${GROUND_Y})`);
+      const deg = ((bin.x - yardX(i, n)) / 10) * (180 / Math.PI);
+      els.wl[i].setAttribute("transform", `rotate(${deg.toFixed(1)} -30 -8)`);
+      els.wr[i].setAttribute("transform", `rotate(${deg.toFixed(1)} 30 -8)`);
+      const pulse = 1 + 0.04 * Math.sin(time * 0.008);
+      els.bursts[i].setAttribute("opacity", bin.placed ? "1" : "0");
+      els.bursts[i].setAttribute("transform", `translate(${slotX(i)},600) scale(${pulse.toFixed(3)})`);
     });
-
-    renderer.render(scene, camera);
-    return alpha;
   };
 
-  const dispose = () => {
-    observer.disconnect();
-    scene.traverse((obj) => {
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) {
-        if (obj.material.map) obj.material.map.dispose();
-        obj.material.dispose();
-      }
-    });
-    renderer.dispose();
-    renderer.domElement.remove();
-  };
-
-  return { update, dispose };
+  return { update, dispose: () => root.remove() };
 }
 
 // Der Ablauf einer Abholung: der Mann holt Tonnen aus dem Hinterhof und stellt sie an die Straße.
@@ -536,7 +407,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   getCardSize() {
-    return this._config && this._config.style === "mann" ? 4 : 2;
+    return this._config && this._config.style === "mann" ? 2 : 2;
   }
 
   connectedCallback() {
@@ -587,15 +458,12 @@ class LutarymWasteCollectionCard extends HTMLElement {
     const wrap = this.shadowRoot.querySelector(".scene-wrap");
     if (!wrap || !this._tl) return;
     const fallback = wrap.querySelector(".fallback");
-    let THREE;
     try {
-      THREE = await loadThree();
       if (token !== this._mountToken || !wrap.isConnected) return;
-      this._scene3d = build3D(THREE, this._infos, wrap);
+      this._scene3d = build2D(this._infos, wrap);
     } catch (err) {
       if (token === this._mountToken && fallback) {
-        fallback.textContent =
-          "3D-Grafik konnte nicht geladen werden. Die Karte braucht Internetzugriff auf three.js (cdn.jsdelivr.net) und WebGL im Browser.";
+        fallback.textContent = "Die Szene konnte nicht gezeichnet werden.";
       }
       return;
     }
@@ -846,12 +714,13 @@ class LutarymWasteCollectionCard extends HTMLElement {
         .scene-wrap {
           position: relative;
           width: 100%;
+          max-width: 300px;
           aspect-ratio: 16 / 9;
           border-radius: 14px;
           overflow: hidden;
           box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35);
         }
-        .scene-wrap canvas { position: absolute; inset: 0; }
+        .scene-wrap svg.comic { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .fallback {
           position: absolute;
           inset: 0;

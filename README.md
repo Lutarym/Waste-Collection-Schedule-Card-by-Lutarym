@@ -3,9 +3,9 @@
 Lovelace-Karte für die Integration **Waste Collection Schedule**. Die Darstellung wird im Editor unter „Darstellung“ gewählt:
 
 - **Glaskarte** (Standard): Jede Tonne ist eine Glaskarte. Ohne Termin schwebt sie ruhig. Einen Tag vorher schwebt sie etwas stärker. Am Abholtag hebt sie sich in 3D nach vorn ab und leuchtet.
-- **Mann mit Tonnen**: Eine 3D-Szene mit Haus, Hinterhof und Straße, gebaut mit three.js. Ein Mann holt die Tonnen mit Termin morgen oder heute aus dem Hinterhof und stellt sie an die Straße. Die abgestellte Tonne leuchtet in ihrer Farbe und zeigt eine Sprechblase „Morgen!“ oder „Heute!“. Tonnen ohne Termin bleiben im Hinterhof. Die Karte lädt three.js beim ersten Anzeigen von cdn.jsdelivr.net, daher braucht der Browser Internetzugriff und WebGL.
+- **Mann mit Tonnen**: Eine Comic-Szene mit Haus, Hinterhof und Straße. Ein Mann holt die Tonnen mit Termin morgen oder heute aus dem Hinterhof und stellt sie an die Straße. Die abgestellte Tonne bekommt einen Stern in ihrer Farbe. Die Farbe zeigt, welche Tonne abgeholt wird. Tonnen ohne Termin bleiben im Hinterhof.
 
-**Version: 2.5.0**
+**Version: 2.6.1**
 
 ## Installation über HACS
 
@@ -67,6 +67,9 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 2.6.1 | Comic-Szene ohne Sprechblasen, die Farbe der Tonne zeigt die Abholung |
+| 2.6.0 | Mann mit Tonnen als Comic-Szene mit realistischen Größen, ohne three.js |
+| 2.5.1 | Mann mit Tonnen kompakter, maximale Breite 300 px |
 | 2.5.0 | Mann mit Tonnen als echte 3D-Szene mit three.js 0.185.1 (geladen von jsDelivr) |
 | 2.4.0 | Mann mit Tonnen als eine gemeinsame 16:9 Szene: Der Mann holt die Tonnen aus dem Hinterhof an die Straße, Farbe und Sprechblase zeigen die Abholung |
 | 2.3.0 | Mann mit Tonnen mit realistischen Größenverhältnissen, Tonne auf Rädern, Abholung durch Rollen zum Rand |
