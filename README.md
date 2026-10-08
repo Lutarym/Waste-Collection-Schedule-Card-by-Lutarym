@@ -2,7 +2,7 @@
 
 Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne wird mit ihrer Farbe angezeigt. Einen Tag vor der Abholung hüpft sie, am Abholtag hüpft und leuchtet sie stärker.
 
-**Version: 0.2.0**
+**Version: 0.3.0**
 
 ## Installation über HACS
 
@@ -14,6 +14,15 @@ Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne wi
 
 Die Karte lässt sich im Dashboard über den visuellen Editor einrichten. Tonnen können dort hinzugefügt, entfernt und bearbeitet werden.
 
+## Demo-Modus
+
+Mit `demo: true` zeigt die Karte Beispieldaten an, ohne dass echte Sensoren nötig sind. Die vier Tonnen haben Termine heute, morgen, in 5 Tagen und in 12 Tagen. So lässt sich das Aussehen und die Animation prüfen, bevor die Integration eingerichtet ist.
+
+```yaml
+type: custom:lutarym-waste-collection-card
+demo: true
+```
+
 ## Konfiguration in YAML
 
 ```yaml
@@ -22,6 +31,7 @@ title: Müllabfuhr
 show_dates: true
 show_badges: true
 animate: true
+demo: false
 bins:
   - entity: sensor.waste_collection_schedule_restmulltonne
     name: Restmüll
@@ -43,8 +53,9 @@ bins:
 | `show_dates` | nein | true | Zeigt das Abholdatum unter jeder Tonne |
 | `show_badges` | nein | true | Zeigt „Heute“ und „Morgen“ bei anstehenden Terminen |
 | `animate` | nein | true | Schaltet Hüpfen und Leuchten ein oder aus |
-| `bins` | ja | | Liste der Tonnen |
-| `bins[].entity` | ja | | Sensor der Integration |
+| `demo` | nein | false | Zeigt Beispieldaten statt echter Sensoren |
+| `bins` | ja, außer im Demo-Modus | | Liste der Tonnen |
+| `bins[].entity` | ja, außer im Demo-Modus | | Sensor der Integration |
 | `bins[].name` | nein | Name des Sensors | Anzeigename der Tonne |
 | `bins[].color` | nein | #888888 | Farbe der Tonne als Hex-Wert |
 
@@ -52,6 +63,7 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 0.3.0 | Demo-Modus mit Beispieldaten |
 | 0.2.0 | Visueller Editor, neue Optionen `show_dates`, `show_badges` und `animate` |
 | 0.1.0 | Erste Version mit Animation und Tonnenfarben |
 

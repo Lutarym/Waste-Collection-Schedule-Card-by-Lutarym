@@ -2,20 +2,32 @@
  * Waste Collection Schedule Card by Lutarym
  * Zeigt die Abholtermine der Müllbehälter aus der Integration "Waste Collection Schedule".
  * Eine Tonne hüpft einen Tag vorher, am Abholtag hüpft und leuchtet sie stärker.
+ * Version 0.3.0: Demo-Modus mit Beispieldaten, ohne echte Sensoren.
  * Version 0.2.0: visueller Editor, neue Optionen show_dates, show_badges und animate.
  */
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.3.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
+
+// Tage ab heute für die Beispieldaten im Demo-Modus, pro Tonne in dieser Reihenfolge.
+const DEMO_OFFSETS = [0, 1, 5, 12];
+
+const DEFAULT_BINS = [
+  { name: "Restmüll", color: "#222222" },
+  { name: "Papier", color: "#1e6fd9" },
+  { name: "Gelbe Tonne", color: "#ff8c1a" },
+  { name: "Biotonne", color: "#8b5a2b" },
+];
 
 const DEFAULT_CONFIG = {
   title: "Müllabfuhr",
   show_dates: true,
   show_badges: true,
   animate: true,
+  demo: false,
   bins: [],
 };
 
@@ -30,6 +42,13 @@ function daysUntil(date) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.round((date - today) / 86400000);
+}
+
+function demoDate(offset) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + offset);
+  return date;
 }
 
 function escapeHtml(value) {
@@ -62,15 +81,29 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config || !Array.isArray(config.bins) || config.bins.length === 0) {
-      throw new Error("Bitte mindestens eine Tonne unter 'bins' angeben.");
+    if (!config) {
+      throw new Error("Keine Konfiguration erhalten.");
     }
-    for (const bin of config.bins) {
-      if (!bin.entity) {
-        throw new Error("Jede Tonne braucht eine 'entity'.");
+    const demo = Boolean(config.demo);
+    const bins = Array.isArray(config.bins) ? config.bins : [];
+
+    if (!demo) {
+      if (bins.length === 0) {
+        throw new Error("Bitte mindestens eine Tonne unter 'bins' angeben oder den Demo-Modus aktivieren.");
+      }
+      for (const bin of bins) {
+        if (!bin.entity) {
+          throw new Error("Jede Tonne braucht eine 'entity'.");
+        }
       }
     }
-    this._config = { ...DEFAULT_CONFIG, ...config };
+
+    this._config = {
+      ...DEFAULT_CONFIG,
+      ...config,
+      demo,
+      bins: bins.length > 0 ? bins : demo ? DEFAULT_BINS : [],
+    };
     this._signature = null;
     this._render();
   }
@@ -86,7 +119,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
         return stateObj ? stateObj.state : "missing";
       })
       .join("|");
-    const signature = `${states}|${new Date().toDateString()}`;
+    const signature = `${states}|${this._config.demo}|${new Date().toDateString()}`;
     if (signature === this._signature) return;
     this._signature = signature;
     this._render();
@@ -106,6 +139,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
       show_dates: true,
       show_badges: true,
       animate: true,
+      demo: false,
       bins: [
         { entity: "sensor.waste_collection_schedule_restmulltonne", name: "Restmüll", color: "#222222" },
         { entity: "sensor.waste_collection_schedule_papiertonne", name: "Papier", color: "#1e6fd9" },
@@ -116,17 +150,31 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   _render() {
-    if (!this._config || !this._hass) return;
+    if (!this._config) return;
+    if (!this._config.demo && !this._hass) return;
 
     const cfg = this._config;
     const dateFormat = { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" };
 
-    const bins = cfg.bins.map((bin) => {
-      const stateObj = this._hass.states[bin.entity];
-      const name = bin.name || (stateObj && stateObj.attributes.friendly_name) || bin.entity;
+    const bins = cfg.bins.map((bin, index) => {
+      const stateObj = this._hass ? this._hass.states[bin.entity] : undefined;
+      const name =
+        bin.name ||
+        (stateObj && stateObj.attributes.friendly_name) ||
+        bin.entity ||
+        `Tonne ${index + 1}`;
       const color = bin.color || "#888888";
-      const date = stateObj ? parseCollectionDate(stateObj.state) : null;
-      const days = date ? daysUntil(date) : null;
+
+      let date = null;
+      let days = null;
+      if (cfg.demo) {
+        const offset = DEMO_OFFSETS[index % DEMO_OFFSETS.length];
+        date = demoDate(offset);
+        days = offset;
+      } else if (stateObj) {
+        date = parseCollectionDate(stateObj.state);
+        days = date ? daysUntil(date) : null;
+      }
 
       let status = "none";
       if (days === 0) status = "today";
@@ -155,7 +203,8 @@ class LutarymWasteCollectionCard extends HTMLElement {
       )
       .join("");
 
-    const title = cfg.title ? `<div class="title">${escapeHtml(cfg.title)}</div>` : "";
+    const titleText = cfg.demo ? `${cfg.title || ""} (Demo)`.trim() : cfg.title;
+    const title = titleText ? `<div class="title">${escapeHtml(titleText)}</div>` : "";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -266,6 +315,7 @@ class LutarymWasteCollectionCardEditor extends HTMLElement {
       show_dates: "Datum anzeigen",
       show_badges: "Heute und Morgen Hinweis anzeigen",
       animate: "Animation aktivieren",
+      demo: "Demo-Modus (Beispieldaten, ohne Sensoren)",
       entity: "Sensor",
       name: "Anzeigename",
       color: "Farbe (Hex, z. B. #1e6fd9)",
@@ -289,12 +339,13 @@ class LutarymWasteCollectionCardEditor extends HTMLElement {
       { name: "show_dates", selector: { boolean: {} } },
       { name: "show_badges", selector: { boolean: {} } },
       { name: "animate", selector: { boolean: {} } },
+      { name: "demo", selector: { boolean: {} } },
     ];
   }
 
   _binSchema() {
     return [
-      { name: "entity", required: true, selector: { entity: { domain: "sensor" } } },
+      { name: "entity", selector: { entity: { domain: "sensor" } } },
       { name: "name", selector: { text: {} } },
       { name: "color", selector: { text: {} } },
     ];
