@@ -1,8 +1,14 @@
 /*
  * Waste Collection Schedule Card by Lutarym
  * Zeigt die Abholtermine der Müllbehälter aus der Integration "Waste Collection Schedule".
- * Comic-Stil mit Gesichtern: Am Abholtag hüpft die Tonne, der Deckel fliegt auf und Funken springen heraus.
- * Version 0.9.0: Comic-Stil zurück, ohne Müllwagen, mit mehr Animation (Deckel, Funken, Zwinkern).
+ *
+ * Konzept "Die schlafenden Tonnen":
+ * - Ohne Termin schlafen die Tonnen, mit Zzz-Zeichen und geschlossenen Augen.
+ * - Einen Tag vorher wachen sie auf, reißen die Augen auf und das Ausrufezeichen erscheint.
+ * - Am Abholtag feiern sie eine Party: Partyhut, Konfetti, Tanzen und offener Mund.
+ *
+ * Version 0.10.0: Komplett neues Design und neue Animation (Schlafen, Aufwachen, Party).
+ * Version 0.9.0: Comic-Stil mit Funken, ohne Müllwagen.
  * Version 0.8.0: Ruhigeres Kachel-Design, inzwischen ersetzt.
  * Version 0.7.0: Müllwagen mit Abholung, Idle-Animation und Option show_truck.
  * Version 0.6.5: Versionsnummer angeglichen, keine Funktionsänderung.
@@ -15,7 +21,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.10.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
@@ -67,32 +73,35 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-// Comic-Tonne mit Gesicht. Der Deckel ist ein eigenes Element und dreht sich am linken Scharnier.
+// Die Tonne als Figur. Alle Zustände (schlafen, wach, Party) stecken im SVG,
+// die CSS-Klassen am Kachel-Element schalten die Teile ein oder aus.
 function binSvg(color) {
   return `
-    <svg viewBox="0 0 64 80" aria-hidden="true">
-      <circle cx="18" cy="77" r="4" fill="#222222"></circle>
-      <circle cx="46" cy="77" r="4" fill="#222222"></circle>
-      <rect class="lid" x="8" y="10" width="48" height="11" rx="4"
-            fill="${color}" stroke="#111111" stroke-width="2.5"></rect>
-      <path d="M14 22 L50 22 L46 70 Q45.5 75 40 75 L24 75 Q18.5 75 18 70 Z"
-            fill="${color}" stroke="#111111" stroke-width="2.5" stroke-linejoin="round"></path>
-      <g class="eyes">
-        <ellipse cx="25" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.8"></ellipse>
-        <ellipse cx="39" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.8"></ellipse>
-        <circle cx="26" cy="42" r="3" fill="#111111"></circle>
-        <circle cx="40" cy="42" r="3" fill="#111111"></circle>
+    <svg class="char" viewBox="-6 -16 82 104" aria-hidden="true">
+      <g class="hat">
+        <polygon points="35,-14 47,12 23,12" fill="#ffd60a" stroke="#1b1b1b" stroke-width="2.5" stroke-linejoin="round"></polygon>
+        <circle cx="35" cy="-14" r="4.5" fill="#ff5a7a" stroke="#1b1b1b" stroke-width="2"></circle>
+        <line x1="29" y1="3" x2="41" y2="3" stroke="#1b1b1b" stroke-width="2"></line>
       </g>
-      <path d="M24 53 Q32 62 40 53" fill="none" stroke="#111111" stroke-width="2.6" stroke-linecap="round"></path>
-    </svg>`;
-}
-
-// Kleiner Funke als Stern, wird am Abholtag um die Tonne herum eingeblendet.
-function sparkSvg() {
-  return `
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <polygon points="12,0 14.5,9.5 24,12 14.5,14.5 12,24 9.5,14.5 0,12 9.5,9.5"
-               fill="#ffd60a" stroke="#111111" stroke-width="1.5" stroke-linejoin="round"></polygon>
+      <rect class="lid" x="6" y="6" width="58" height="14" rx="7" fill="${color}" stroke="#1b1b1b" stroke-width="2.5"></rect>
+      <path class="body" d="M11 18 L59 18 L55 76 Q54 84 46 84 L24 84 Q16 84 15 76 Z"
+            fill="${color}" stroke="#1b1b1b" stroke-width="2.5" stroke-linejoin="round"></path>
+      <ellipse cx="22" cy="34" rx="4.5" ry="9" fill="#ffffff" opacity="0.2" transform="rotate(12 22 34)"></ellipse>
+      <circle cx="19" cy="54" r="4.5" fill="#ff7a8a" opacity="0.55"></circle>
+      <circle cx="51" cy="54" r="4.5" fill="#ff7a8a" opacity="0.55"></circle>
+      <g class="eyes-open">
+        <ellipse cx="27" cy="44" rx="5.5" ry="6.5" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.8"></ellipse>
+        <ellipse cx="43" cy="44" rx="5.5" ry="6.5" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.8"></ellipse>
+        <circle cx="28" cy="46" r="2.8" fill="#1b1b1b"></circle>
+        <circle cx="44" cy="46" r="2.8" fill="#1b1b1b"></circle>
+      </g>
+      <g class="eyes-closed" fill="none" stroke="#1b1b1b" stroke-width="2.6" stroke-linecap="round">
+        <path d="M21 45 Q27 50 33 45"></path>
+        <path d="M37 45 Q43 50 49 45"></path>
+      </g>
+      <path class="mouth-smile" d="M28 62 Q35 69 42 62" fill="none" stroke="#1b1b1b" stroke-width="2.6" stroke-linecap="round"></path>
+      <path class="mouth-party" d="M27 60 Q35 76 43 60 Z" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="2" stroke-linejoin="round"></path>
+      <ellipse class="mouth-sleep" cx="35" cy="63" rx="2.8" ry="3.2" fill="#1b1b1b"></ellipse>
     </svg>`;
 }
 
@@ -149,7 +158,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 2;
+    return 3;
   }
 
   static getConfigElement() {
@@ -204,19 +213,24 @@ class LutarymWasteCollectionCard extends HTMLElement {
       else if (days === 1) status = "tomorrow";
       const animated = cfg.animate ? status : "none";
 
-      const badgeText = status === "today" ? "Heute!" : status === "tomorrow" ? "Morgen" : "";
-      const sparks =
-        animated === "today"
-          ? `<span class="spark s1">${sparkSvg()}</span>
-             <span class="spark s2">${sparkSvg()}</span>
-             <span class="spark s3">${sparkSvg()}</span>`
-          : "";
+      const badgeText = status === "today" ? "Party heute!" : status === "tomorrow" ? "Morgen!" : "";
 
       return `
         <div class="tile ${animated}" style="--bin-color:${escapeHtml(color)}">
-          <div class="bin-wrap">
-            ${sparks}
+          <div class="stage">
+            <div class="halo"></div>
+            <span class="zz z1">Z</span>
+            <span class="zz z2">z</span>
+            <span class="zz z3">z</span>
+            <span class="bang">!</span>
+            <span class="confetti k1"></span>
+            <span class="confetti k2"></span>
+            <span class="confetti k3"></span>
+            <span class="confetti k4"></span>
+            <span class="confetti k5"></span>
+            <span class="confetti k6"></span>
             ${binSvg(color)}
+            <div class="floor"></div>
           </div>
           <div class="bin-name">${escapeHtml(name)}</div>
           ${cfg.show_dates ? `<div class="bin-date">${escapeHtml(date ? date.toLocaleDateString("de-DE", dateFormat) : "kein Termin")}</div>` : ""}
@@ -233,146 +247,278 @@ class LutarymWasteCollectionCard extends HTMLElement {
         ha-card { padding: 16px; }
         .title {
           font-size: 1.1em;
-          font-weight: 600;
-          margin-bottom: 12px;
+          font-weight: 700;
+          margin-bottom: 8px;
           color: var(--primary-text-color);
         }
-        .bins {
+        .tiles {
           display: flex;
           flex-wrap: wrap;
           justify-content: space-around;
-          gap: 14px;
-          padding-top: 44px;
+          gap: 10px;
         }
         .tile {
           display: flex;
           flex-direction: column;
           align-items: center;
-          min-width: 96px;
+          width: 124px;
+          padding: 8px 4px 10px;
+          border-radius: 22px;
         }
-        .bin-wrap {
+        .stage {
           position: relative;
-          width: 64px;
-          height: 80px;
-          transform-origin: 50% 100%;
+          width: 96px;
+          height: 112px;
+          margin-top: 14px;
         }
-        .bin-wrap > svg {
+        .stage svg.char {
           position: relative;
-          z-index: 1;
+          z-index: 2;
           width: 100%;
           height: 100%;
           display: block;
           overflow: visible;
         }
-        .lid {
-          transform-box: fill-box;
-          transform-origin: 0% 100%;
+
+        /* Leuchtender Kreis hinter der Tonne in ihrer Farbe */
+        .halo {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 104px;
+          height: 104px;
+          margin: -52px 0 0 -52px;
+          border-radius: 50%;
+          background: var(--bin-color);
+          opacity: 0.12;
+          z-index: 0;
         }
-        .eyes {
-          transform-box: fill-box;
-          transform-origin: center;
-          animation: blink 3.4s infinite;
+        .floor {
+          position: absolute;
+          left: 50%;
+          bottom: -2px;
+          width: 58px;
+          height: 9px;
+          margin-left: -29px;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.22);
+          z-index: 1;
+        }
+
+        /* Teile, die nur in bestimmten Zuständen sichtbar sind */
+        .eyes-closed,
+        .mouth-sleep,
+        .mouth-party,
+        .hat,
+        .zz,
+        .bang,
+        .confetti {
+          display: none;
+        }
+        .none .eyes-open,
+        .none .mouth-smile,
+        .none .mouth-party,
+        .tomorrow .eyes-closed,
+        .tomorrow .mouth-sleep,
+        .tomorrow .mouth-party,
+        .today .eyes-closed,
+        .today .mouth-smile,
+        .today .mouth-sleep { display: none; }
+        .none .eyes-closed,
+        .none .mouth-sleep,
+        .tomorrow .mouth-smile,
+        .today .mouth-party { display: inline; }
+        .tomorrow .eyes-open,
+        .today .eyes-open { display: inline; }
+        .today .hat { display: inline; }
+
+        /* Schlafen: Zzz steigen auf */
+        .none .zz {
+          display: block;
+          position: absolute;
+          right: 6px;
+          top: 6px;
+          font-weight: 800;
+          color: var(--primary-text-color);
+          opacity: 0;
+          z-index: 3;
+          animation: zfloat 3.2s ease-in infinite;
+        }
+        .none .z1 { font-size: 15px; animation-delay: 0s; }
+        .none .z2 { font-size: 12px; animation-delay: 1.07s; }
+        .none .z3 { font-size: 9px; animation-delay: 2.14s; }
+
+        /* Aufwachen: Ausrufezeichen poppt auf */
+        .tomorrow .bang {
+          display: block;
+          position: absolute;
+          right: 0;
+          top: 2px;
+          width: 24px;
+          height: 24px;
+          line-height: 20px;
+          border-radius: 50%;
+          border: 2.5px solid #1b1b1b;
+          background: #ff5a7a;
+          color: #ffffff;
+          font-weight: 900;
+          font-size: 16px;
+          text-align: center;
+          z-index: 3;
+          animation: bangPop 2.6s ease-in-out infinite;
+        }
+
+        /* Party: Konfetti regnet */
+        .today .confetti {
+          display: block;
+          position: absolute;
+          top: 22px;
+          left: 50%;
+          width: 6px;
+          height: 11px;
+          border-radius: 2px;
+          opacity: 0;
+          z-index: 3;
+          animation: confetti 1.8s ease-out infinite;
+        }
+        .today .k1 { background: #ff5a7a; margin-left: -34px; animation-delay: 0s; }
+        .today .k2 { background: #ffd60a; margin-left: 26px; animation-delay: 0.3s; }
+        .today .k3 { background: #2f6fbf; margin-left: -18px; animation-delay: 0.6s; }
+        .today .k4 { background: #6bcb77; margin-left: 12px; animation-delay: 0.9s; }
+        .today .k5 { background: #ff8c42; margin-left: -4px; animation-delay: 1.2s; }
+        .today .k6 { background: #b084f5; margin-left: 32px; animation-delay: 1.5s; }
+
+        /* Badge: comic-artige Sprechblase */
+        .badge {
+          margin-top: 8px;
+          padding: 3px 10px;
+          border: 2.5px solid #1b1b1b;
+          border-radius: 14px 14px 14px 4px;
+          font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive;
+          font-size: 0.82em;
+          font-weight: 700;
+          color: #1b1b1b;
+          background: #fff3a3;
+          box-shadow: 2px 2px 0 #1b1b1b;
+          transform: rotate(-4deg);
+        }
+        .badge.today {
+          background: #ff5a7a;
+          color: #ffffff;
+          animation: wiggle 0.7s ease-in-out infinite;
         }
         .bin-name {
-          margin-top: 6px;
-          font-weight: 600;
+          margin-top: 4px;
+          font-weight: 700;
           color: var(--primary-text-color);
           text-align: center;
         }
         .bin-date {
-          font-size: 0.85em;
+          font-size: 0.82em;
           color: var(--secondary-text-color);
           text-align: center;
         }
 
-        /* Sprechblasen-Hinweise */
-        .badge {
-          margin-top: 8px;
-          padding: 3px 12px;
-          border: 2.5px solid #111111;
-          border-radius: 14px 14px 14px 4px;
-          font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive;
-          font-size: 0.85em;
-          font-weight: 700;
-          color: #111111;
-          background: #fff3a3;
-          box-shadow: 2px 2px 0 #111111;
-          transform: rotate(-4deg);
+        /* Lid und Augen blinzeln */
+        .eyes-open {
+          transform-box: fill-box;
+          transform-origin: center;
         }
-        .badge.today {
-          background: #ff6b6b;
-          color: #ffffff;
-          animation: wiggle 0.6s ease-in-out infinite;
-        }
+        .none .body { animation: breathe 3.2s ease-in-out infinite; }
+        .none .halo { opacity: 0.08; animation: none; }
+        .none .lid { animation: lidSleep 3.2s ease-in-out infinite; }
+        .none .eyes-closed { animation: none; }
 
-        /* Idle: die Tonne wiegt sich leicht */
-        .none .bin-wrap {
-          animation: sway 4s ease-in-out infinite;
-        }
+        .tomorrow svg.char { animation: stretch 2.6s ease-in-out infinite; }
+        .tomorrow .lid { animation: yawn 2.6s ease-in-out infinite; }
+        .tomorrow .eyes-open { animation: blink 3.4s infinite; }
+        .tomorrow .halo { opacity: 0.2; animation: haloPulse 2.6s ease-in-out infinite; }
+        .tomorrow .floor { animation: floorTomorrow 2.6s ease-in-out infinite; }
 
-        /* Einen Tag vorher: gemütliches Hüpfen, Deckel wackelt */
-        .tomorrow .bin-wrap {
-          animation: boingSoft 2.4s ease-in-out infinite;
-        }
-        .tomorrow .lid {
-          animation: lidWiggle 2.4s ease-in-out infinite;
-        }
+        .today svg.char { animation: dance 1.8s ease-in-out infinite; }
+        .today .body { animation: squash 0.9s ease-in-out infinite; }
+        .today .lid { animation: lidParty 0.9s ease-in-out infinite; }
+        .today .hat { animation: hatPop 2.4s ease-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+        .today .eyes-open { animation: blink 2.8s infinite; }
+        .today .halo { opacity: 0.28; animation: haloPulse 1.8s ease-in-out infinite; }
+        .today .floor { animation: floorParty 1.8s ease-in-out infinite; }
 
-        /* Am Abholtag: große Hüpfer, Deckel fliegt auf, Funken springen */
-        .today .bin-wrap {
-          animation: boingBig 1.2s ease-in-out infinite;
-        }
-        .today .lid {
-          animation: lidPop 1.2s ease-in-out infinite;
-        }
-        .spark {
-          position: absolute;
-          width: 16px;
-          height: 16px;
-          z-index: 2;
-          opacity: 0;
-          animation: spark 1.2s ease-out infinite;
-        }
-        .spark svg {
-          width: 100%;
-          height: 100%;
-          display: block;
-        }
-        .spark.s1 { top: 0; left: -6px; animation-delay: 0s; }
-        .spark.s2 { top: 4px; right: -8px; animation-delay: 0.35s; }
-        .spark.s3 { top: 34px; right: -14px; animation-delay: 0.7s; }
+        /* Keyframes */
+        .lid { transform-box: fill-box; transform-origin: 0% 100%; }
+        .body { transform-box: fill-box; transform-origin: 50% 100%; }
 
-        @keyframes sway {
-          0%, 100% { transform: rotate(-2.5deg); }
-          50% { transform: rotate(2.5deg); }
+        @keyframes breathe {
+          0%, 100% { transform: scale(1, 1); }
+          50% { transform: scale(1.03, 0.98); }
         }
-        @keyframes boingSoft {
-          0%, 15% { transform: translateY(0) scale(1.1, 0.9); }
-          40% { transform: translateY(-14px) scale(0.94, 1.06); }
-          60% { transform: translateY(0) scale(1.08, 0.92); }
-          80%, 100% { transform: translateY(0) scale(1, 1); }
-        }
-        @keyframes boingBig {
-          0%, 12% { transform: translateY(0) scale(1.18, 0.82) rotate(0deg); }
-          35% { transform: translateY(-30px) scale(0.9, 1.12) rotate(-8deg); }
-          50% { transform: translateY(-30px) scale(0.9, 1.12) rotate(8deg); }
-          70% { transform: translateY(0) scale(1.2, 0.8) rotate(0deg); }
-          82%, 100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
-        }
-        @keyframes lidWiggle {
+        @keyframes lidSleep {
           0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(-10deg); }
+          50% { transform: rotate(-3deg); }
         }
-        @keyframes lidPop {
-          0%, 22% { transform: rotate(0deg); }
-          34%, 62% { transform: rotate(-34deg); }
-          74%, 100% { transform: rotate(0deg); }
+        @keyframes zfloat {
+          0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+          20% { opacity: 1; }
+          100% { opacity: 0; transform: translate(14px, -30px) scale(1.25); }
         }
-        @keyframes spark {
-          0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
-          25% { opacity: 1; transform: scale(1.15) rotate(90deg); }
-          60% { opacity: 0; transform: scale(0.4) rotate(180deg); }
-          100% { opacity: 0; transform: scale(0.2) rotate(180deg); }
+        @keyframes bangPop {
+          0%, 8% { transform: scale(0); }
+          16% { transform: scale(1.25) rotate(-12deg); }
+          24%, 60% { transform: scale(1) rotate(0deg); }
+          72%, 100% { transform: scale(0); }
+        }
+        @keyframes stretch {
+          0%, 50% { transform: translateY(0) scale(1, 1); }
+          58% { transform: translateY(-6px) scale(0.94, 1.08); }
+          66% { transform: translateY(0) scale(1.06, 0.94); }
+          74% { transform: translateY(0) scale(0.98, 1.03) rotate(-3deg); }
+          82% { transform: translateY(0) scale(1, 1) rotate(3deg); }
+          90%, 100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+        }
+        @keyframes yawn {
+          0%, 40% { transform: rotate(0deg); }
+          50%, 62% { transform: rotate(-18deg); }
+          75%, 100% { transform: rotate(0deg); }
+        }
+        @keyframes haloPulse {
+          0%, 100% { transform: scale(0.92); }
+          50% { transform: scale(1.08); }
+        }
+        @keyframes floorTomorrow {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(0.85); }
+        }
+        @keyframes floorParty {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(0.6); }
+        }
+        @keyframes dance {
+          0%, 100% { transform: translateX(0) translateY(0) rotate(0deg); }
+          12% { transform: translateX(-6px) translateY(-12px) rotate(-8deg); }
+          25% { transform: translateX(0) translateY(0) rotate(0deg); }
+          37% { transform: translateX(6px) translateY(-12px) rotate(8deg); }
+          50% { transform: translateX(0) translateY(0) rotate(0deg); }
+          62% { transform: translateX(-6px) translateY(-12px) rotate(-8deg); }
+          75% { transform: translateX(0) translateY(0) rotate(0deg); }
+          87% { transform: translateX(6px) translateY(-12px) rotate(8deg); }
+        }
+        @keyframes squash {
+          0%, 100% { transform: scale(1, 1); }
+          50% { transform: scale(1.06, 0.92); }
+        }
+        @keyframes lidParty {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(-22deg); }
+        }
+        @keyframes hatPop {
+          0% { transform: translateY(-40px) rotate(-40deg) scale(0); }
+          14% { transform: translateY(0) rotate(8deg) scale(1.2); }
+          22%, 78% { transform: translateY(0) rotate(0deg) scale(1); }
+          90%, 100% { transform: translateY(-40px) rotate(40deg) scale(0); }
+        }
+        @keyframes confetti {
+          0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+          12% { opacity: 1; }
+          100% { opacity: 0; transform: translate(var(--dx, 0), 80px) rotate(540deg); }
         }
         @keyframes blink {
           0%, 90%, 100% { transform: scaleY(1); }
@@ -380,12 +526,12 @@ class LutarymWasteCollectionCard extends HTMLElement {
         }
         @keyframes wiggle {
           0%, 100% { transform: rotate(-4deg); }
-          50% { transform: rotate(3deg) scale(1.05); }
+          50% { transform: rotate(3deg) scale(1.06); }
         }
       </style>
       <ha-card>
         ${title}
-        <div class="bins">${tiles.join("")}</div>
+        <div class="tiles">${tiles.join("")}</div>
       </ha-card>
     `;
   }
@@ -563,7 +709,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Waste Collection Schedule Card by Lutarym",
-  description: "Müllabfuhr-Termine mit lustigen Comic-Tonnen, die am Abholtag hüpfen und Funken sprühen.",
+  description: "Schlafende Müll-Tonnen, die aufwachen und am Abholtag eine Party feiern.",
   preview: false,
 });
 
