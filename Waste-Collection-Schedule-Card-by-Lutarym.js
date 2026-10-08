@@ -2,13 +2,14 @@
  * Waste Collection Schedule Card by Lutarym
  * Zeigt die Abholtermine der Müllbehälter aus der Integration "Waste Collection Schedule".
  *
- * Konzept "Die schlafenden Tonnen":
- * - Ohne Termin schlafen die Tonnen, mit Zzz-Zeichen und geschlossenen Augen.
- * - Einen Tag vorher wachen sie auf, reißen die Augen auf und das Ausrufezeichen erscheint.
- * - Am Abholtag feiern sie eine Party: Partyhut, Konfetti, Tanzen und offener Mund.
+ * Konzept "Abreißkalender": Jede Tonne ist ein Kalenderblatt, ohne Tonnen-Zeichnung.
+ * - Ohne Termin hängt das Blatt ruhig am Ring und wiegt sich leicht.
+ * - Einen Tag vorher wackelt das Blatt, die Ecke rollt sich auf und ein Stempel "Morgen" knallt drauf.
+ * - Am Abholtag reißt das Blatt ab, fliegt weg und ein comicartiges "RRIP!" erscheint.
  *
+ * Version 0.12.0: Komplett neues Konzept (Abreißkalender statt Tonnenfiguren).
  * Version 0.11.0: Versionsnummer erhöht, keine Funktionsänderung.
- * Version 0.10.0: Komplett neues Design und neue Animation (Schlafen, Aufwachen, Party).
+ * Version 0.10.0: Schlafende Tonnen mit Party-Zustand (ersetzt durch 0.12.0).
  * Version 0.9.0: Comic-Stil mit Funken, ohne Müllwagen.
  * Version 0.8.0: Ruhigeres Kachel-Design, inzwischen ersetzt.
  * Version 0.7.0: Müllwagen mit Abholung, Idle-Animation und Option show_truck.
@@ -22,7 +23,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.11.0";
+const CARD_VERSION = "0.12.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
@@ -72,38 +73,6 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-// Die Tonne als Figur. Alle Zustände (schlafen, wach, Party) stecken im SVG,
-// die CSS-Klassen am Kachel-Element schalten die Teile ein oder aus.
-function binSvg(color) {
-  return `
-    <svg class="char" viewBox="-6 -16 82 104" aria-hidden="true">
-      <g class="hat">
-        <polygon points="35,-14 47,12 23,12" fill="#ffd60a" stroke="#1b1b1b" stroke-width="2.5" stroke-linejoin="round"></polygon>
-        <circle cx="35" cy="-14" r="4.5" fill="#ff5a7a" stroke="#1b1b1b" stroke-width="2"></circle>
-        <line x1="29" y1="3" x2="41" y2="3" stroke="#1b1b1b" stroke-width="2"></line>
-      </g>
-      <rect class="lid" x="6" y="6" width="58" height="14" rx="7" fill="${color}" stroke="#1b1b1b" stroke-width="2.5"></rect>
-      <path class="body" d="M11 18 L59 18 L55 76 Q54 84 46 84 L24 84 Q16 84 15 76 Z"
-            fill="${color}" stroke="#1b1b1b" stroke-width="2.5" stroke-linejoin="round"></path>
-      <ellipse cx="22" cy="34" rx="4.5" ry="9" fill="#ffffff" opacity="0.2" transform="rotate(12 22 34)"></ellipse>
-      <circle cx="19" cy="54" r="4.5" fill="#ff7a8a" opacity="0.55"></circle>
-      <circle cx="51" cy="54" r="4.5" fill="#ff7a8a" opacity="0.55"></circle>
-      <g class="eyes-open">
-        <ellipse cx="27" cy="44" rx="5.5" ry="6.5" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.8"></ellipse>
-        <ellipse cx="43" cy="44" rx="5.5" ry="6.5" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.8"></ellipse>
-        <circle cx="28" cy="46" r="2.8" fill="#1b1b1b"></circle>
-        <circle cx="44" cy="46" r="2.8" fill="#1b1b1b"></circle>
-      </g>
-      <g class="eyes-closed" fill="none" stroke="#1b1b1b" stroke-width="2.6" stroke-linecap="round">
-        <path d="M21 45 Q27 50 33 45"></path>
-        <path d="M37 45 Q43 50 49 45"></path>
-      </g>
-      <path class="mouth-smile" d="M28 62 Q35 69 42 62" fill="none" stroke="#1b1b1b" stroke-width="2.6" stroke-linecap="round"></path>
-      <path class="mouth-party" d="M27 60 Q35 76 43 60 Z" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="2" stroke-linejoin="round"></path>
-      <ellipse class="mouth-sleep" cx="35" cy="63" rx="2.8" ry="3.2" fill="#1b1b1b"></ellipse>
-    </svg>`;
 }
 
 class LutarymWasteCollectionCard extends HTMLElement {
@@ -159,7 +128,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 3;
+    return 2;
   }
 
   static getConfigElement() {
@@ -187,7 +156,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
     if (!this._config.demo && !this._hass) return;
 
     const cfg = this._config;
-    const dateFormat = { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" };
+    const fullDate = { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" };
 
     const tiles = cfg.bins.map((bin, index) => {
       const stateObj = this._hass ? this._hass.states[bin.entity] : undefined;
@@ -214,28 +183,26 @@ class LutarymWasteCollectionCard extends HTMLElement {
       else if (days === 1) status = "tomorrow";
       const animated = cfg.animate ? status : "none";
 
-      const badgeText = status === "today" ? "Party heute!" : status === "tomorrow" ? "Morgen!" : "";
+      const weekday = date ? date.toLocaleDateString("de-DE", { weekday: "short" }).replace(".", "") : "?";
+      const day = date ? String(date.getDate()).padStart(2, "0") : "?";
+      const month = date ? date.toLocaleDateString("de-DE", { month: "short" }).replace(".", "") : "";
+      const badgeText = status === "today" ? "Heute!" : status === "tomorrow" ? "Morgen" : "";
 
       return `
-        <div class="tile ${animated}" style="--bin-color:${escapeHtml(color)}">
-          <div class="stage">
-            <div class="halo"></div>
-            <span class="zz z1">Z</span>
-            <span class="zz z2">z</span>
-            <span class="zz z3">z</span>
-            <span class="bang">!</span>
-            <span class="confetti k1"></span>
-            <span class="confetti k2"></span>
-            <span class="confetti k3"></span>
-            <span class="confetti k4"></span>
-            <span class="confetti k5"></span>
-            <span class="confetti k6"></span>
-            ${binSvg(color)}
-            <div class="floor"></div>
+        <div class="tile ${animated}" style="--c:${escapeHtml(color)}">
+          <div class="block">
+            <div class="page">
+              <div class="rings"><i></i><i></i></div>
+              <div class="strip">${escapeHtml(month)}</div>
+              <div class="wk">${escapeHtml(weekday)}</div>
+              <div class="day">${escapeHtml(day)}</div>
+              <div class="corner"></div>
+            </div>
+            <div class="rip">RRIP!</div>
+            ${cfg.show_badges && badgeText ? `<div class="stamp">${badgeText}</div>` : ""}
           </div>
           <div class="bin-name">${escapeHtml(name)}</div>
-          ${cfg.show_dates ? `<div class="bin-date">${escapeHtml(date ? date.toLocaleDateString("de-DE", dateFormat) : "kein Termin")}</div>` : ""}
-          ${cfg.show_badges && badgeText ? `<div class="badge ${animated}">${badgeText}</div>` : ""}
+          ${cfg.show_dates ? `<div class="bin-date">${escapeHtml(date ? date.toLocaleDateString("de-DE", fullDate) : "kein Termin")}</div>` : ""}
         </div>`;
     });
 
@@ -262,154 +229,130 @@ class LutarymWasteCollectionCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           align-items: center;
-          width: 124px;
-          padding: 8px 4px 10px;
-          border-radius: 22px;
+          width: 120px;
         }
-        .stage {
+        .block {
           position: relative;
+          width: 104px;
+          height: 124px;
+          margin-top: 6px;
+        }
+
+        /* Bindung oben mit zwei Ringen */
+        .rings {
+          position: absolute;
+          top: -6px;
+          left: 0;
+          right: 0;
+          display: flex;
+          justify-content: space-around;
+          padding: 0 20px;
+          z-index: 3;
+        }
+        .rings i {
+          display: block;
+          width: 10px;
+          height: 16px;
+          border: 2.5px solid #1b1b1b;
+          border-radius: 6px;
+          background: #d8d8d8;
+        }
+
+        /* Das Kalenderblatt */
+        .page {
+          position: absolute;
+          left: 4px;
+          top: 8px;
           width: 96px;
           height: 112px;
-          margin-top: 14px;
-        }
-        .stage svg.char {
-          position: relative;
+          background: #fffdf6;
+          border: 2.5px solid #1b1b1b;
+          border-radius: 10px;
+          box-shadow: 4px 4px 0 #1b1b1b;
+          text-align: center;
+          transform-origin: 50% 0;
           z-index: 2;
-          width: 100%;
-          height: 100%;
-          display: block;
-          overflow: visible;
+        }
+        .strip {
+          height: 28px;
+          line-height: 28px;
+          margin: -2.5px -2.5px 0;
+          background: var(--c);
+          border-bottom: 2.5px solid #1b1b1b;
+          border-radius: 7px 7px 0 0;
+          color: #ffffff;
+          font-family: "Comic Sans MS", "Comic Neue", cursive;
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          text-shadow: 1px 1px 0 #1b1b1b;
+        }
+        .wk {
+          margin-top: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #555555;
+          text-transform: uppercase;
+        }
+        .day {
+          margin-top: 0;
+          font-family: "Arial Black", Impact, sans-serif;
+          font-size: 46px;
+          font-weight: 900;
+          line-height: 1.05;
+          color: #1b1b1b;
         }
 
-        /* Leuchtender Kreis hinter der Tonne in ihrer Farbe */
-        .halo {
+        /* Eingerollte Ecke unten rechts */
+        .corner {
           position: absolute;
-          left: 50%;
-          top: 50%;
-          width: 104px;
-          height: 104px;
-          margin: -52px 0 0 -52px;
-          border-radius: 50%;
-          background: var(--bin-color);
-          opacity: 0.12;
-          z-index: 0;
-        }
-        .floor {
-          position: absolute;
-          left: 50%;
-          bottom: -2px;
-          width: 58px;
-          height: 9px;
-          margin-left: -29px;
-          border-radius: 50%;
-          background: rgba(0, 0, 0, 0.22);
-          z-index: 1;
-        }
-
-        /* Teile, die nur in bestimmten Zuständen sichtbar sind */
-        .eyes-closed,
-        .mouth-sleep,
-        .mouth-party,
-        .hat,
-        .zz,
-        .bang,
-        .confetti {
-          display: none;
-        }
-        .none .eyes-open,
-        .none .mouth-smile,
-        .none .mouth-party,
-        .tomorrow .eyes-closed,
-        .tomorrow .mouth-sleep,
-        .tomorrow .mouth-party,
-        .today .eyes-closed,
-        .today .mouth-smile,
-        .today .mouth-sleep { display: none; }
-        .none .eyes-closed,
-        .none .mouth-sleep,
-        .tomorrow .mouth-smile,
-        .today .mouth-party { display: inline; }
-        .tomorrow .eyes-open,
-        .today .eyes-open { display: inline; }
-        .today .hat { display: inline; }
-
-        /* Schlafen: Zzz steigen auf */
-        .none .zz {
-          display: block;
-          position: absolute;
-          right: 6px;
-          top: 6px;
-          font-weight: 800;
-          color: var(--primary-text-color);
-          opacity: 0;
-          z-index: 3;
-          animation: zfloat 3.2s ease-in infinite;
-        }
-        .none .z1 { font-size: 15px; animation-delay: 0s; }
-        .none .z2 { font-size: 12px; animation-delay: 1.07s; }
-        .none .z3 { font-size: 9px; animation-delay: 2.14s; }
-
-        /* Aufwachen: Ausrufezeichen poppt auf */
-        .tomorrow .bang {
-          display: block;
-          position: absolute;
-          right: 0;
-          top: 2px;
+          right: -2.5px;
+          bottom: -2.5px;
           width: 24px;
           height: 24px;
-          line-height: 20px;
-          border-radius: 50%;
-          border: 2.5px solid #1b1b1b;
-          background: #ff5a7a;
-          color: #ffffff;
-          font-weight: 900;
-          font-size: 16px;
-          text-align: center;
-          z-index: 3;
-          animation: bangPop 2.6s ease-in-out infinite;
+          background: linear-gradient(135deg, #fffdf6 50%, #e6dcc0 50%);
+          border-left: 2.5px solid #1b1b1b;
+          border-top: 2.5px solid #1b1b1b;
+          border-top-left-radius: 8px;
+          transform-origin: 100% 100%;
         }
 
-        /* Party: Konfetti regnet */
-        .today .confetti {
-          display: block;
+        /* Comic-Ausruf beim Abreißen */
+        .rip {
+          display: none;
           position: absolute;
-          top: 22px;
-          left: 50%;
-          width: 6px;
-          height: 11px;
-          border-radius: 2px;
+          right: -12px;
+          top: 10px;
+          font-family: "Comic Sans MS", "Comic Neue", cursive;
+          font-size: 17px;
+          font-weight: 900;
+          color: #ff5a5a;
+          text-shadow: 2px 2px 0 #1b1b1b;
           opacity: 0;
-          z-index: 3;
-          animation: confetti 1.8s ease-out infinite;
+          z-index: 4;
         }
-        .today .k1 { background: #ff5a7a; margin-left: -34px; animation-delay: 0s; }
-        .today .k2 { background: #ffd60a; margin-left: 26px; animation-delay: 0.3s; }
-        .today .k3 { background: #2f6fbf; margin-left: -18px; animation-delay: 0.6s; }
-        .today .k4 { background: #6bcb77; margin-left: 12px; animation-delay: 0.9s; }
-        .today .k5 { background: #ff8c42; margin-left: -4px; animation-delay: 1.2s; }
-        .today .k6 { background: #b084f5; margin-left: 32px; animation-delay: 1.5s; }
 
-        /* Badge: comic-artige Sprechblase */
-        .badge {
-          margin-top: 8px;
+        /* Stempel */
+        .stamp {
+          display: none;
+          position: absolute;
+          left: -8px;
+          bottom: -6px;
           padding: 3px 10px;
           border: 2.5px solid #1b1b1b;
-          border-radius: 14px 14px 14px 4px;
-          font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive;
-          font-size: 0.82em;
-          font-weight: 700;
+          border-radius: 6px;
+          font-family: "Comic Sans MS", "Comic Neue", cursive;
+          font-size: 12px;
+          font-weight: 900;
           color: #1b1b1b;
-          background: #fff3a3;
+          background: #ffe066;
           box-shadow: 2px 2px 0 #1b1b1b;
           transform: rotate(-4deg);
+          z-index: 5;
         }
-        .badge.today {
-          background: #ff5a7a;
-          color: #ffffff;
-          animation: wiggle 0.7s ease-in-out infinite;
-        }
+
         .bin-name {
-          margin-top: 4px;
+          margin-top: 6px;
           font-weight: 700;
           color: var(--primary-text-color);
           text-align: center;
@@ -420,114 +363,76 @@ class LutarymWasteCollectionCard extends HTMLElement {
           text-align: center;
         }
 
-        /* Lid und Augen blinzeln */
-        .eyes-open {
-          transform-box: fill-box;
-          transform-origin: center;
+        /* Zustand: ruhig am Ring hängend */
+        .none .page {
+          animation: sway 5s ease-in-out infinite;
         }
-        .none .body { animation: breathe 3.2s ease-in-out infinite; }
-        .none .halo { opacity: 0.08; animation: none; }
-        .none .lid { animation: lidSleep 3.2s ease-in-out infinite; }
-        .none .eyes-closed { animation: none; }
 
-        .tomorrow svg.char { animation: stretch 2.6s ease-in-out infinite; }
-        .tomorrow .lid { animation: yawn 2.6s ease-in-out infinite; }
-        .tomorrow .eyes-open { animation: blink 3.4s infinite; }
-        .tomorrow .halo { opacity: 0.2; animation: haloPulse 2.6s ease-in-out infinite; }
-        .tomorrow .floor { animation: floorTomorrow 2.6s ease-in-out infinite; }
-
-        .today svg.char { animation: dance 1.8s ease-in-out infinite; }
-        .today .body { animation: squash 0.9s ease-in-out infinite; }
-        .today .lid { animation: lidParty 0.9s ease-in-out infinite; }
-        .today .hat { animation: hatPop 2.4s ease-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
-        .today .eyes-open { animation: blink 2.8s infinite; }
-        .today .halo { opacity: 0.28; animation: haloPulse 1.8s ease-in-out infinite; }
-        .today .floor { animation: floorParty 1.8s ease-in-out infinite; }
-
-        /* Keyframes */
-        .lid { transform-box: fill-box; transform-origin: 0% 100%; }
-        .body { transform-box: fill-box; transform-origin: 50% 100%; }
-
-        @keyframes breathe {
-          0%, 100% { transform: scale(1, 1); }
-          50% { transform: scale(1.03, 0.98); }
+        /* Zustand: einen Tag vorher, das Blatt wackelt, die Ecke rollt sich auf */
+        .tomorrow .page {
+          animation: wobble 2.2s ease-in-out infinite;
         }
-        @keyframes lidSleep {
+        .tomorrow .corner {
+          animation: curl 2.2s ease-in-out infinite;
+        }
+        .tomorrow .stamp {
+          display: block;
+          animation: thump 2.2s ease-out infinite;
+          background: #ffe066;
+        }
+
+        /* Zustand: Abholtag, das Blatt reißt ab und ein neues kommt nach */
+        .today .page {
+          animation: tear 2.4s ease-in infinite;
+        }
+        .today .corner {
+          animation: curl 0.6s ease-in-out infinite;
+        }
+        .today .rip {
+          display: block;
+          animation: rip 2.4s ease-out infinite;
+        }
+        .today .stamp {
+          display: block;
+          color: #ffffff;
+          background: #ff5a5a;
+          animation: thump 1.2s ease-out infinite;
+        }
+
+        @keyframes sway {
+          0%, 100% { transform: rotate(-1.2deg); }
+          50% { transform: rotate(1.2deg); }
+        }
+        @keyframes wobble {
           0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(-3deg); }
+          25% { transform: rotate(-2.5deg); }
+          50% { transform: rotate(0deg); }
+          75% { transform: rotate(2.5deg); }
         }
-        @keyframes zfloat {
-          0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
-          20% { opacity: 1; }
-          100% { opacity: 0; transform: translate(14px, -30px) scale(1.25); }
-        }
-        @keyframes bangPop {
-          0%, 8% { transform: scale(0); }
-          16% { transform: scale(1.25) rotate(-12deg); }
-          24%, 60% { transform: scale(1) rotate(0deg); }
-          72%, 100% { transform: scale(0); }
-        }
-        @keyframes stretch {
-          0%, 50% { transform: translateY(0) scale(1, 1); }
-          58% { transform: translateY(-6px) scale(0.94, 1.08); }
-          66% { transform: translateY(0) scale(1.06, 0.94); }
-          74% { transform: translateY(0) scale(0.98, 1.03) rotate(-3deg); }
-          82% { transform: translateY(0) scale(1, 1) rotate(3deg); }
-          90%, 100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
-        }
-        @keyframes yawn {
-          0%, 40% { transform: rotate(0deg); }
-          50%, 62% { transform: rotate(-18deg); }
-          75%, 100% { transform: rotate(0deg); }
-        }
-        @keyframes haloPulse {
-          0%, 100% { transform: scale(0.92); }
-          50% { transform: scale(1.08); }
-        }
-        @keyframes floorTomorrow {
+        @keyframes curl {
           0%, 100% { transform: scale(1); }
-          50% { transform: scale(0.85); }
+          50% { transform: scale(1.5); }
         }
-        @keyframes floorParty {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(0.6); }
+        @keyframes thump {
+          0% { opacity: 0; transform: scale(1.6) rotate(-4deg); }
+          12% { opacity: 1; transform: scale(0.92) rotate(-4deg); }
+          20% { transform: scale(1.04) rotate(-4deg); }
+          28%, 100% { opacity: 1; transform: scale(1) rotate(-4deg); }
         }
-        @keyframes dance {
-          0%, 100% { transform: translateX(0) translateY(0) rotate(0deg); }
-          12% { transform: translateX(-6px) translateY(-12px) rotate(-8deg); }
-          25% { transform: translateX(0) translateY(0) rotate(0deg); }
-          37% { transform: translateX(6px) translateY(-12px) rotate(8deg); }
-          50% { transform: translateX(0) translateY(0) rotate(0deg); }
-          62% { transform: translateX(-6px) translateY(-12px) rotate(-8deg); }
-          75% { transform: translateX(0) translateY(0) rotate(0deg); }
-          87% { transform: translateX(6px) translateY(-12px) rotate(8deg); }
+        @keyframes tear {
+          0%, 40% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+          45% { transform: translate(-3px, 0) rotate(-2deg); opacity: 1; }
+          50% { transform: translate(3px, 0) rotate(2deg); opacity: 1; }
+          55% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+          62% { transform: translate(70px, -150px) rotate(35deg); opacity: 0; }
+          63% { transform: translate(0, 30px) rotate(0deg); opacity: 0; }
+          80%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
         }
-        @keyframes squash {
-          0%, 100% { transform: scale(1, 1); }
-          50% { transform: scale(1.06, 0.92); }
-        }
-        @keyframes lidParty {
-          0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(-22deg); }
-        }
-        @keyframes hatPop {
-          0% { transform: translateY(-40px) rotate(-40deg) scale(0); }
-          14% { transform: translateY(0) rotate(8deg) scale(1.2); }
-          22%, 78% { transform: translateY(0) rotate(0deg) scale(1); }
-          90%, 100% { transform: translateY(-40px) rotate(40deg) scale(0); }
-        }
-        @keyframes confetti {
-          0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
-          12% { opacity: 1; }
-          100% { opacity: 0; transform: translate(var(--dx, 0), 80px) rotate(540deg); }
-        }
-        @keyframes blink {
-          0%, 90%, 100% { transform: scaleY(1); }
-          94% { transform: scaleY(0.1); }
-        }
-        @keyframes wiggle {
-          0%, 100% { transform: rotate(-4deg); }
-          50% { transform: rotate(3deg) scale(1.06); }
+        @keyframes rip {
+          0%, 56% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+          62% { opacity: 1; transform: scale(1.25) rotate(-12deg); }
+          72% { opacity: 1; transform: scale(1) rotate(-6deg); }
+          85%, 100% { opacity: 0; transform: scale(1) rotate(-6deg); }
         }
       </style>
       <ha-card>
@@ -710,7 +615,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Waste Collection Schedule Card by Lutarym",
-  description: "Schlafende Müll-Tonnen, die aufwachen und am Abholtag eine Party feiern.",
+  description: "Müllabfuhr-Termine als Abreißkalender, der am Abholtag abreißt.",
   preview: false,
 });
 

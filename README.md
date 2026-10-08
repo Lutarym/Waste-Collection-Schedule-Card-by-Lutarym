@@ -1,8 +1,8 @@
 # Waste Collection Schedule Card by Lutarym
 
-Lovelace-Karte für die Integration **Waste Collection Schedule**. Die Tonnen sind kleine Figuren. Ohne Termin schlafen sie mit Zzz. Einen Tag vor der Abholung wachen sie auf und das Ausrufezeichen erscheint. Am Abholtag feiern sie eine Party mit Partyhut und Konfetti.
+Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne ist ein Abreißkalender-Blatt in ihrer Farbe. Ohne Termin hängt das Blatt ruhig am Ring. Einen Tag vorher wackelt es und ein Stempel „Morgen“ erscheint. Am Abholtag reißt das Blatt ab und ein „RRIP!“ fliegt heraus.
 
-**Version: 0.11.0**
+**Version: 0.12.0**
 
 ## Installation über HACS
 
@@ -63,6 +63,7 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 0.12.0 | Komplett neues Konzept: Abreißkalender statt Tonnenfiguren, Blatt reißt am Abholtag ab |
 | 0.11.0 | Versionsnummer erhöht, keine Funktionsänderung |
 | 0.10.0 | Komplett neues Design und neue Animation: schlafende Tonnen, Aufwachen, Party mit Hut und Konfetti |
 | 0.9.0 | Comic-Stil zurück, ohne Müllwagen. Am Abholtag hüpft die Tonne, der Deckel fliegt auf, Funken springen heraus, das Gesicht zwinkert |
