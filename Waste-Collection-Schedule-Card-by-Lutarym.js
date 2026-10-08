@@ -7,6 +7,7 @@
  * - Einen Tag vorher wackelt das Blatt, die Ecke rollt sich auf und ein Stempel "Morgen" knallt drauf.
  * - Am Abholtag reißt das Blatt ab, fliegt weg und ein comicartiges "RRIP!" erscheint.
  *
+ * Version 1.0.0: Erste große Version mit neuem Konzept (Abreißkalender), Versionssprung auf 1.0.0.
  * Version 0.12.0: Komplett neues Konzept (Abreißkalender statt Tonnenfiguren).
  * Version 0.11.0: Versionsnummer erhöht, keine Funktionsänderung.
  * Version 0.10.0: Schlafende Tonnen mit Party-Zustand (ersetzt durch 0.12.0).
@@ -23,7 +24,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.12.0";
+const CARD_VERSION = "1.0.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 

@@ -2,7 +2,7 @@
 
 Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne ist ein Abreißkalender-Blatt in ihrer Farbe. Ohne Termin hängt das Blatt ruhig am Ring. Einen Tag vorher wackelt es und ein Stempel „Morgen“ erscheint. Am Abholtag reißt das Blatt ab und ein „RRIP!“ fliegt heraus.
 
-**Version: 0.12.0**
+**Version: 1.0.0**
 
 ## Installation über HACS
 
@@ -63,6 +63,7 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 1.0.0 | Erste große Version: Abreißkalender-Konzept, Versionssprung auf 1.0.0 |
 | 0.12.0 | Komplett neues Konzept: Abreißkalender statt Tonnenfiguren, Blatt reißt am Abholtag ab |
 | 0.11.0 | Versionsnummer erhöht, keine Funktionsänderung |
 | 0.10.0 | Komplett neues Design und neue Animation: schlafende Tonnen, Aufwachen, Party mit Hut und Konfetti |
