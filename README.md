@@ -1,8 +1,8 @@
 # Waste Collection Schedule Card by Lutarym
 
-Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne wird mit ihrer Farbe angezeigt. Einen Tag vor der Abholung hüpft sie, am Abholtag hüpft und leuchtet sie stärker.
+Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne ist eine kleine Comic-Figur in ihrer Farbe. Einen Tag vor der Abholung wackelt sie gemütlich, am Abholtag hüpft sie, der Deckel fliegt auf und Funken springen heraus.
 
-**Version: 0.7.0**
+**Version: 0.9.0**
 
 ## Installation über HACS
 
@@ -35,16 +35,16 @@ demo: false
 bins:
   - entity: sensor.waste_collection_schedule_restmulltonne
     name: Restmüll
-    color: "#222222"
+    color: "#3b3b3b"
   - entity: sensor.waste_collection_schedule_papiertonne
     name: Papier
-    color: "#1e6fd9"
+    color: "#2f6fbf"
   - entity: sensor.waste_collection_schedule_gelbe_tonne
     name: Gelbe Tonne
-    color: "#ff8c1a"
+    color: "#e8a317"
   - entity: sensor.waste_collection_schedule_biotonne
     name: Biotonne
-    color: "#8b5a2b"
+    color: "#7a5230"
 ```
 
 | Option | Pflicht | Standard | Beschreibung |
@@ -52,8 +52,7 @@ bins:
 | `title` | nein | Müllabfuhr | Überschrift der Karte |
 | `show_dates` | nein | true | Zeigt das Abholdatum unter jeder Tonne |
 | `show_badges` | nein | true | Zeigt „Heute“ und „Morgen“ bei anstehenden Terminen |
-| `animate` | nein | true | Schaltet Hüpfen, Leuchten und Müllwagen ein oder aus |
-| `show_truck` | nein | true | Zeigt den Müllwagen, wenn eine Tonne am Abholtag ansteht |
+| `animate` | nein | true | Schaltet die Animationen ein oder aus |
 | `demo` | nein | false | Zeigt Beispieldaten statt echter Sensoren |
 | `bins` | ja, außer im Demo-Modus | | Liste der Tonnen |
 | `bins[].entity` | ja, außer im Demo-Modus | | Sensor der Integration |
@@ -64,9 +63,11 @@ bins:
 
 | Version | Änderungen |
 |---|---|
-| 0.7.0 | Müllwagen fährt vorbei und holt die Tonnen ab, Tonnen dösen im Leerlauf, neue Option `show_truck` |
+| 0.9.0 | Comic-Stil zurück, ohne Müllwagen. Am Abholtag hüpft die Tonne, der Deckel fliegt auf, Funken springen heraus, das Gesicht zwinkert |
+| 0.8.0 | Ruhigeres Kachel-Design (ersetzt durch 0.9.0) |
+| 0.7.0 | Müllwagen fährt vorbei und holt die Tonnen ab, neue Option `show_truck` |
 | 0.6.5 | Versionsnummer angeglichen, keine Funktionsänderung |
-| 0.5.0 | Comic-Stil mit Gesicht, lustigere Quetsch-und-Streck-Animation, Sprechblasen für „Heute“ und „Morgen“ |
+| 0.5.0 | Comic-Stil mit Gesicht, Quetsch-und-Streck-Animation, Sprechblasen für „Heute“ und „Morgen“ |
 | 0.4.0 | Versionsnummer angeglichen, keine Funktionsänderung |
 | 0.3.1 | Animation läuft auch bei aktiver Einstellung „Bewegung reduzieren“ |
 | 0.3.0 | Demo-Modus mit Beispieldaten |

@@ -1,7 +1,9 @@
 /*
  * Waste Collection Schedule Card by Lutarym
  * Zeigt die Abholtermine der Müllbehälter aus der Integration "Waste Collection Schedule".
- * Einen Tag vorher wackelt die Tonne, am Abholtag fährt ein Müllwagen vorbei und holt sie ab.
+ * Comic-Stil mit Gesichtern: Am Abholtag hüpft die Tonne, der Deckel fliegt auf und Funken springen heraus.
+ * Version 0.9.0: Comic-Stil zurück, ohne Müllwagen, mit mehr Animation (Deckel, Funken, Zwinkern).
+ * Version 0.8.0: Ruhigeres Kachel-Design, inzwischen ersetzt.
  * Version 0.7.0: Müllwagen mit Abholung, Idle-Animation und Option show_truck.
  * Version 0.6.5: Versionsnummer angeglichen, keine Funktionsänderung.
  * Version 0.5.0: Comic-Stil mit Gesicht, Quetsch-und-Streck-Animation und Sprechblasen-Hinweisen.
@@ -13,28 +15,24 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "0.9.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
 // Tage ab heute für die Beispieldaten im Demo-Modus, pro Tonne in dieser Reihenfolge.
 const DEMO_OFFSETS = [0, 1, 5, 12];
 
-// Dauer eines Durchlaufs des Müllwagens in Sekunden.
-const TRUCK_CYCLE_SECONDS = 7;
-
 const DEFAULT_BINS = [
-  { name: "Restmüll", color: "#222222" },
-  { name: "Papier", color: "#1e6fd9" },
-  { name: "Gelbe Tonne", color: "#ff8c1a" },
-  { name: "Biotonne", color: "#8b5a2b" },
+  { name: "Restmüll", color: "#3b3b3b" },
+  { name: "Papier", color: "#2f6fbf" },
+  { name: "Gelbe Tonne", color: "#e8a317" },
+  { name: "Biotonne", color: "#7a5230" },
 ];
 
 const DEFAULT_CONFIG = {
   title: "Müllabfuhr",
   show_dates: true,
   show_badges: true,
-  show_truck: true,
   animate: true,
   demo: false,
   bins: [],
@@ -69,77 +67,33 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Comic-Tonne mit Gesicht. Der Deckel ist ein eigenes Element und dreht sich am linken Scharnier.
 function binSvg(color) {
   return `
-    <svg viewBox="0 0 64 84" aria-hidden="true">
-      <circle cx="18" cy="79" r="4" fill="#555555"></circle>
-      <circle cx="46" cy="79" r="4" fill="#555555"></circle>
-      <path d="M14 20 L50 20 L46 74 Q45.5 78 41 78 L23 78 Q18.5 78 18 74 Z"
-            fill="${color}" stroke="var(--primary-text-color)"
-            stroke-opacity="0.5" stroke-width="1.5"></path>
-      <rect x="9" y="8" width="46" height="12" rx="4" fill="${color}"
-            stroke="var(--primary-text-color)" stroke-opacity="0.5" stroke-width="1.5"></rect>
+    <svg viewBox="0 0 64 80" aria-hidden="true">
+      <circle cx="18" cy="77" r="4" fill="#222222"></circle>
+      <circle cx="46" cy="77" r="4" fill="#222222"></circle>
+      <rect class="lid" x="8" y="10" width="48" height="11" rx="4"
+            fill="${color}" stroke="#111111" stroke-width="2.5"></rect>
+      <path d="M14 22 L50 22 L46 70 Q45.5 75 40 75 L24 75 Q18.5 75 18 70 Z"
+            fill="${color}" stroke="#111111" stroke-width="2.5" stroke-linejoin="round"></path>
       <g class="eyes">
-        <ellipse cx="25" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.5"></ellipse>
-        <ellipse cx="39" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.5"></ellipse>
+        <ellipse cx="25" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.8"></ellipse>
+        <ellipse cx="39" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.8"></ellipse>
         <circle cx="26" cy="42" r="3" fill="#111111"></circle>
         <circle cx="40" cy="42" r="3" fill="#111111"></circle>
       </g>
-      <path d="M24 53 Q32 61 40 53" fill="none" stroke="#111111" stroke-width="2.5" stroke-linecap="round"></path>
+      <path d="M24 53 Q32 62 40 53" fill="none" stroke="#111111" stroke-width="2.6" stroke-linecap="round"></path>
     </svg>`;
 }
 
-function truckSvg() {
+// Kleiner Funke als Stern, wird am Abholtag um die Tonne herum eingeblendet.
+function sparkSvg() {
   return `
-    <svg viewBox="0 0 120 70" aria-hidden="true">
-      <rect x="6" y="8" width="72" height="44" rx="6" fill="#2e7d32" stroke="#111111" stroke-width="3"></rect>
-      <path d="M80 24 L100 24 Q110 24 112 34 L114 50 L80 50 Z" fill="#2e7d32" stroke="#111111" stroke-width="3" stroke-linejoin="round"></path>
-      <path d="M86 28 L98 28 Q104 28 106 34 L86 34 Z" fill="#bfe6ff" stroke="#111111" stroke-width="2"></path>
-      <rect x="110" y="46" width="6" height="6" fill="#333333"></rect>
-      <g class="truck-eyes">
-        <circle cx="28" cy="22" r="5" fill="#ffffff" stroke="#111111" stroke-width="1.5"></circle>
-        <circle cx="42" cy="22" r="5" fill="#ffffff" stroke="#111111" stroke-width="1.5"></circle>
-        <circle cx="29" cy="23" r="2" fill="#111111"></circle>
-        <circle cx="43" cy="23" r="2" fill="#111111"></circle>
-      </g>
-      <path d="M26 34 Q35 42 44 34" fill="none" stroke="#111111" stroke-width="2.5" stroke-linecap="round"></path>
-      <g class="wheel">
-        <circle cx="26" cy="56" r="9" fill="#222222" stroke="#ffffff" stroke-width="2"></circle>
-        <line x1="26" y1="50" x2="26" y2="62" stroke="#ffffff" stroke-width="2"></line>
-        <line x1="20" y1="56" x2="32" y2="56" stroke="#ffffff" stroke-width="2"></line>
-      </g>
-      <g class="wheel">
-        <circle cx="96" cy="56" r="9" fill="#222222" stroke="#ffffff" stroke-width="2"></circle>
-        <line x1="96" y1="50" x2="96" y2="62" stroke="#ffffff" stroke-width="2"></line>
-        <line x1="90" y1="56" x2="102" y2="56" stroke="#ffffff" stroke-width="2"></line>
-      </g>
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <polygon points="12,0 14.5,9.5 24,12 14.5,14.5 12,24 9.5,14.5 0,12 9.5,9.5"
+               fill="#ffd60a" stroke="#111111" stroke-width="1.5" stroke-linejoin="round"></polygon>
     </svg>`;
-}
-
-// Position der Tonne in Prozent der Szene, und wann der Müllwagen an ihr vorbeifährt.
-function binCenterPercent(index, count) {
-  return ((index + 0.5) / count) * 100;
-}
-
-function pickupPercent(index, count) {
-  // Der Müllwagen startet bei links -25 % und endet bei 110 % der Breite.
-  // Seine Mitte liegt etwa 8 % rechts von seiner linken Kante.
-  const center = binCenterPercent(index, count);
-  return ((center + 8) / 135) * 100;
-}
-
-function pickupKeyframes(index, count) {
-  const p = pickupPercent(index, count);
-  const r = (value) => Math.round(value * 10) / 10;
-  return `
-    @keyframes pickup-${index} {
-      0%, ${r(p - 10)}% { transform: translateY(0) rotate(0deg); opacity: 1; }
-      ${r(p - 4)}% { transform: translateY(-4px) rotate(-6deg); opacity: 1; }
-      ${r(p - 1)}% { transform: translateY(0) rotate(6deg); opacity: 1; }
-      ${r(p + 2)}% { transform: translateY(-30px) rotate(0deg); opacity: 1; }
-      ${r(p + 6)}% { transform: translateY(-50px) scale(0.6); opacity: 0; }
-      100% { transform: translateY(0) rotate(0deg); opacity: 1; }
-    }`;
 }
 
 class LutarymWasteCollectionCard extends HTMLElement {
@@ -195,7 +149,7 @@ class LutarymWasteCollectionCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 3;
+    return 2;
   }
 
   static getConfigElement() {
@@ -207,14 +161,13 @@ class LutarymWasteCollectionCard extends HTMLElement {
       title: "Müllabfuhr",
       show_dates: true,
       show_badges: true,
-      show_truck: true,
       animate: true,
       demo: false,
       bins: [
-        { entity: "sensor.waste_collection_schedule_restmulltonne", name: "Restmüll", color: "#222222" },
-        { entity: "sensor.waste_collection_schedule_papiertonne", name: "Papier", color: "#1e6fd9" },
-        { entity: "sensor.waste_collection_schedule_gelbe_tonne", name: "Gelbe Tonne", color: "#ff8c1a" },
-        { entity: "sensor.waste_collection_schedule_biotonne", name: "Biotonne", color: "#8b5a2b" },
+        { entity: "sensor.waste_collection_schedule_restmulltonne", name: "Restmüll", color: "#3b3b3b" },
+        { entity: "sensor.waste_collection_schedule_papiertonne", name: "Papier", color: "#2f6fbf" },
+        { entity: "sensor.waste_collection_schedule_gelbe_tonne", name: "Gelbe Tonne", color: "#e8a317" },
+        { entity: "sensor.waste_collection_schedule_biotonne", name: "Biotonne", color: "#7a5230" },
       ],
     };
   }
@@ -224,10 +177,9 @@ class LutarymWasteCollectionCard extends HTMLElement {
     if (!this._config.demo && !this._hass) return;
 
     const cfg = this._config;
-    const count = cfg.bins.length;
     const dateFormat = { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" };
 
-    const bins = cfg.bins.map((bin, index) => {
+    const tiles = cfg.bins.map((bin, index) => {
       const stateObj = this._hass ? this._hass.states[bin.entity] : undefined;
       const name =
         bin.name ||
@@ -250,50 +202,27 @@ class LutarymWasteCollectionCard extends HTMLElement {
       let status = "none";
       if (days === 0) status = "today";
       else if (days === 1) status = "tomorrow";
+      const animated = cfg.animate ? status : "none";
 
-      const animatedStatus = cfg.animate ? status : "none";
-      const wrapStyle = [`--bin-color:${escapeHtml(color)}`];
-      if (animatedStatus === "today") {
-        wrapStyle.push(
-          `animation: pickup-${index} ${TRUCK_CYCLE_SECONDS}s linear infinite, glow 1.2s ease-in-out infinite`
-        );
-      }
+      const badgeText = status === "today" ? "Heute!" : status === "tomorrow" ? "Morgen" : "";
+      const sparks =
+        animated === "today"
+          ? `<span class="spark s1">${sparkSvg()}</span>
+             <span class="spark s2">${sparkSvg()}</span>
+             <span class="spark s3">${sparkSvg()}</span>`
+          : "";
 
-      return {
-        index,
-        name,
-        color,
-        status: animatedStatus,
-        wrapStyle: wrapStyle.join(";"),
-        dateText: date ? date.toLocaleDateString("de-DE", dateFormat) : "kein Termin",
-        badgeText: status === "today" ? "Heute" : status === "tomorrow" ? "Morgen" : "",
-      };
-    });
-
-    const todayBins = bins.filter((bin) => bin.status === "today");
-    const showTruck = cfg.show_truck && cfg.animate && todayBins.length > 0;
-
-    const pickupStyles = todayBins
-      .map((bin) => pickupKeyframes(bin.index, count))
-      .join("");
-
-    const binsHtml = bins
-      .map(
-        (bin) => `
-        <div class="bin ${bin.status}">
-          <div class="bin-wrap" style="${bin.wrapStyle}">
-            ${binSvg(bin.color)}
+      return `
+        <div class="tile ${animated}" style="--bin-color:${escapeHtml(color)}">
+          <div class="bin-wrap">
+            ${sparks}
+            ${binSvg(color)}
           </div>
-          <div class="bin-name">${escapeHtml(bin.name)}</div>
-          ${cfg.show_dates ? `<div class="bin-date">${escapeHtml(bin.dateText)}</div>` : ""}
-          ${cfg.show_badges && bin.badgeText ? `<div class="badge ${bin.status}">${bin.badgeText}</div>` : ""}
-        </div>`
-      )
-      .join("");
-
-    const truckHtml = showTruck
-      ? `<div class="truck">${truckSvg()}</div>`
-      : "";
+          <div class="bin-name">${escapeHtml(name)}</div>
+          ${cfg.show_dates ? `<div class="bin-date">${escapeHtml(date ? date.toLocaleDateString("de-DE", dateFormat) : "kein Termin")}</div>` : ""}
+          ${cfg.show_badges && badgeText ? `<div class="badge ${animated}">${badgeText}</div>` : ""}
+        </div>`;
+    });
 
     const titleText = cfg.demo ? `${cfg.title || ""} (Demo)`.trim() : cfg.title;
     const title = titleText ? `<div class="title">${escapeHtml(titleText)}</div>` : "";
@@ -304,45 +233,49 @@ class LutarymWasteCollectionCard extends HTMLElement {
         ha-card { padding: 16px; }
         .title {
           font-size: 1.1em;
-          font-weight: 500;
+          font-weight: 600;
           margin-bottom: 12px;
           color: var(--primary-text-color);
-        }
-        .scene {
-          position: relative;
-          padding-bottom: 84px;
-          overflow: hidden;
         }
         .bins {
           display: flex;
           flex-wrap: wrap;
           justify-content: space-around;
-          gap: 12px;
+          gap: 14px;
+          padding-top: 44px;
         }
-        .bin {
+        .tile {
           display: flex;
           flex-direction: column;
           align-items: center;
-          min-width: 90px;
+          min-width: 96px;
         }
         .bin-wrap {
+          position: relative;
           width: 64px;
-          height: 84px;
+          height: 80px;
           transform-origin: 50% 100%;
         }
-        .bin-wrap svg {
+        .bin-wrap > svg {
+          position: relative;
+          z-index: 1;
           width: 100%;
           height: 100%;
           display: block;
+          overflow: visible;
         }
-        .bin-wrap .eyes {
+        .lid {
+          transform-box: fill-box;
+          transform-origin: 0% 100%;
+        }
+        .eyes {
           transform-box: fill-box;
           transform-origin: center;
-          animation: blink 3.2s infinite;
+          animation: blink 3.4s infinite;
         }
         .bin-name {
           margin-top: 6px;
-          font-weight: 500;
+          font-weight: 600;
           color: var(--primary-text-color);
           text-align: center;
         }
@@ -351,97 +284,108 @@ class LutarymWasteCollectionCard extends HTMLElement {
           color: var(--secondary-text-color);
           text-align: center;
         }
+
+        /* Sprechblasen-Hinweise */
         .badge {
           margin-top: 8px;
           padding: 3px 12px;
-          border: 2px solid #111111;
+          border: 2.5px solid #111111;
           border-radius: 14px 14px 14px 4px;
-          font-family: "Comic Sans MS", "Chalkboard SE", cursive;
+          font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive;
           font-size: 0.85em;
           font-weight: 700;
           color: #111111;
-          background: #ffe14d;
+          background: #fff3a3;
           box-shadow: 2px 2px 0 #111111;
           transform: rotate(-4deg);
         }
         .badge.today {
-          background: #ff5a5a;
+          background: #ff6b6b;
           color: #ffffff;
+          animation: wiggle 0.6s ease-in-out infinite;
         }
+
+        /* Idle: die Tonne wiegt sich leicht */
         .none .bin-wrap {
           animation: sway 4s ease-in-out infinite;
         }
+
+        /* Einen Tag vorher: gemütliches Hüpfen, Deckel wackelt */
         .tomorrow .bin-wrap {
-          animation: boing 1.6s ease-in-out infinite;
+          animation: boingSoft 2.4s ease-in-out infinite;
         }
-        .road {
+        .tomorrow .lid {
+          animation: lidWiggle 2.4s ease-in-out infinite;
+        }
+
+        /* Am Abholtag: große Hüpfer, Deckel fliegt auf, Funken springen */
+        .today .bin-wrap {
+          animation: boingBig 1.2s ease-in-out infinite;
+        }
+        .today .lid {
+          animation: lidPop 1.2s ease-in-out infinite;
+        }
+        .spark {
           position: absolute;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 8px;
-          border-radius: 4px;
-          background: #666666;
+          width: 16px;
+          height: 16px;
+          z-index: 2;
+          opacity: 0;
+          animation: spark 1.2s ease-out infinite;
         }
-        .truck {
-          position: absolute;
-          bottom: 8px;
-          left: -25%;
-          width: 120px;
-          height: 70px;
-          animation: truckDrive ${TRUCK_CYCLE_SECONDS}s linear infinite;
-        }
-        .truck svg {
+        .spark svg {
           width: 100%;
           height: 100%;
           display: block;
         }
-        .truck .wheel {
-          transform-box: fill-box;
-          transform-origin: center;
-          animation: spin 0.35s linear infinite;
-        }
-        .truck .truck-eyes {
-          transform-box: fill-box;
-          transform-origin: center;
-          animation: blink 2.6s infinite;
-        }
+        .spark.s1 { top: 0; left: -6px; animation-delay: 0s; }
+        .spark.s2 { top: 4px; right: -8px; animation-delay: 0.35s; }
+        .spark.s3 { top: 34px; right: -14px; animation-delay: 0.7s; }
+
         @keyframes sway {
-          0%, 100% { transform: rotate(-2deg); }
-          50% { transform: rotate(2deg); }
+          0%, 100% { transform: rotate(-2.5deg); }
+          50% { transform: rotate(2.5deg); }
         }
-        @keyframes boing {
-          0%, 12% { transform: translateY(0) scale(1.12, 0.88) rotate(0deg); }
-          45% { transform: translateY(-24px) scale(0.92, 1.08) rotate(-10deg); }
-          60% { transform: translateY(-24px) scale(0.92, 1.08) rotate(10deg); }
-          80% { transform: translateY(0) scale(1.14, 0.86) rotate(0deg); }
-          90% { transform: translateY(0) scale(0.98, 1.02) rotate(0deg); }
-          100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+        @keyframes boingSoft {
+          0%, 15% { transform: translateY(0) scale(1.1, 0.9); }
+          40% { transform: translateY(-14px) scale(0.94, 1.06); }
+          60% { transform: translateY(0) scale(1.08, 0.92); }
+          80%, 100% { transform: translateY(0) scale(1, 1); }
         }
-        @keyframes glow {
-          0%, 100% { filter: drop-shadow(0 0 2px var(--bin-color)); }
-          50% { filter: drop-shadow(0 0 12px var(--bin-color)); }
+        @keyframes boingBig {
+          0%, 12% { transform: translateY(0) scale(1.18, 0.82) rotate(0deg); }
+          35% { transform: translateY(-30px) scale(0.9, 1.12) rotate(-8deg); }
+          50% { transform: translateY(-30px) scale(0.9, 1.12) rotate(8deg); }
+          70% { transform: translateY(0) scale(1.2, 0.8) rotate(0deg); }
+          82%, 100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+        }
+        @keyframes lidWiggle {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(-10deg); }
+        }
+        @keyframes lidPop {
+          0%, 22% { transform: rotate(0deg); }
+          34%, 62% { transform: rotate(-34deg); }
+          74%, 100% { transform: rotate(0deg); }
+        }
+        @keyframes spark {
+          0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+          25% { opacity: 1; transform: scale(1.15) rotate(90deg); }
+          60% { opacity: 0; transform: scale(0.4) rotate(180deg); }
+          100% { opacity: 0; transform: scale(0.2) rotate(180deg); }
         }
         @keyframes blink {
-          0%, 92%, 100% { transform: scaleY(1); }
-          95% { transform: scaleY(0.1); }
+          0%, 90%, 100% { transform: scaleY(1); }
+          94% { transform: scaleY(0.1); }
         }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
+        @keyframes wiggle {
+          0%, 100% { transform: rotate(-4deg); }
+          50% { transform: rotate(3deg) scale(1.05); }
         }
-        @keyframes truckDrive {
-          from { left: -25%; }
-          to { left: 110%; }
-        }
-        ${pickupStyles}
       </style>
       <ha-card>
         ${title}
-        <div class="scene">
-          <div class="bins">${binsHtml}</div>
-          <div class="road"></div>
-          ${truckHtml}
-        </div>
+        <div class="bins">${tiles.join("")}</div>
       </ha-card>
     `;
   }
@@ -471,12 +415,11 @@ class LutarymWasteCollectionCardEditor extends HTMLElement {
       title: "Überschrift",
       show_dates: "Datum anzeigen",
       show_badges: "Heute und Morgen Hinweis anzeigen",
-      show_truck: "Müllwagen anzeigen",
       animate: "Animation aktivieren",
       demo: "Demo-Modus (Beispieldaten, ohne Sensoren)",
       entity: "Sensor",
       name: "Anzeigename",
-      color: "Farbe (Hex, z. B. #1e6fd9)",
+      color: "Farbe (Hex, z. B. #2f6fbf)",
     };
     return labels[schemaItem.name] || schemaItem.name;
   }
@@ -496,7 +439,6 @@ class LutarymWasteCollectionCardEditor extends HTMLElement {
       { name: "title", selector: { text: {} } },
       { name: "show_dates", selector: { boolean: {} } },
       { name: "show_badges", selector: { boolean: {} } },
-      { name: "show_truck", selector: { boolean: {} } },
       { name: "animate", selector: { boolean: {} } },
       { name: "demo", selector: { boolean: {} } },
     ];
@@ -621,7 +563,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Waste Collection Schedule Card by Lutarym",
-  description: "Müllabfuhr-Termine mit hüpfenden Tonnen und einem Müllwagen, der sie abholt.",
+  description: "Müllabfuhr-Termine mit lustigen Comic-Tonnen, die am Abholtag hüpfen und Funken sprühen.",
   preview: false,
 });
 
