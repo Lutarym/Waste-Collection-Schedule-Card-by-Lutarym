@@ -2,7 +2,7 @@
 
 Lovelace-Karte für die Integration **Waste Collection Schedule**. Jede Tonne wird mit ihrer Farbe angezeigt. Einen Tag vor der Abholung hüpft sie, am Abholtag hüpft und leuchtet sie stärker.
 
-**Version: 0.6.5**
+**Version: 0.7.0**
 
 ## Installation über HACS
 
@@ -52,7 +52,8 @@ bins:
 | `title` | nein | Müllabfuhr | Überschrift der Karte |
 | `show_dates` | nein | true | Zeigt das Abholdatum unter jeder Tonne |
 | `show_badges` | nein | true | Zeigt „Heute“ und „Morgen“ bei anstehenden Terminen |
-| `animate` | nein | true | Schaltet Hüpfen und Leuchten ein oder aus |
+| `animate` | nein | true | Schaltet Hüpfen, Leuchten und Müllwagen ein oder aus |
+| `show_truck` | nein | true | Zeigt den Müllwagen, wenn eine Tonne am Abholtag ansteht |
 | `demo` | nein | false | Zeigt Beispieldaten statt echter Sensoren |
 | `bins` | ja, außer im Demo-Modus | | Liste der Tonnen |
 | `bins[].entity` | ja, außer im Demo-Modus | | Sensor der Integration |
@@ -63,6 +64,7 @@ bins:
 
 | Version | Änderungen |
 |---|---|
+| 0.7.0 | Müllwagen fährt vorbei und holt die Tonnen ab, Tonnen dösen im Leerlauf, neue Option `show_truck` |
 | 0.6.5 | Versionsnummer angeglichen, keine Funktionsänderung |
 | 0.5.0 | Comic-Stil mit Gesicht, lustigere Quetsch-und-Streck-Animation, Sprechblasen für „Heute“ und „Morgen“ |
 | 0.4.0 | Versionsnummer angeglichen, keine Funktionsänderung |
