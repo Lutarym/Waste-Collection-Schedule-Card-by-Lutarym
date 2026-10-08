@@ -2,6 +2,7 @@
  * Waste Collection Schedule Card by Lutarym
  * Zeigt die Abholtermine der Müllbehälter aus der Integration "Waste Collection Schedule".
  * Eine Tonne hüpft einen Tag vorher, am Abholtag hüpft und leuchtet sie stärker.
+ * Version 0.5.0: Comic-Stil mit Gesicht, Quetsch-und-Streck-Animation und Sprechblasen-Hinweisen.
  * Version 0.4.0: Versionsnummer angeglichen, keine Funktionsänderung.
  * Version 0.3.1: Animation ignoriert die Einstellung "Bewegung reduzieren".
  * Version 0.3.0: Demo-Modus mit Beispieldaten, ohne echte Sensoren.
@@ -10,7 +11,7 @@
 
 const CARD_TAG = "lutarym-waste-collection-card";
 const EDITOR_TAG = "lutarym-waste-collection-card-editor";
-const CARD_VERSION = "0.4.0";
+const CARD_VERSION = "0.5.0";
 
 const DATE_PATTERN = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
 
@@ -72,6 +73,13 @@ function binSvg(color) {
             stroke-opacity="0.5" stroke-width="1.5"></path>
       <rect x="9" y="8" width="46" height="12" rx="4" fill="${color}"
             stroke="var(--primary-text-color)" stroke-opacity="0.5" stroke-width="1.5"></rect>
+      <g class="eyes">
+        <ellipse cx="25" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.5"></ellipse>
+        <ellipse cx="39" cy="40" rx="6" ry="7" fill="#ffffff" stroke="#111111" stroke-width="1.5"></ellipse>
+        <circle cx="26" cy="42" r="3" fill="#111111"></circle>
+        <circle cx="40" cy="42" r="3" fill="#111111"></circle>
+      </g>
+      <path d="M24 53 Q32 61 40 53" fill="none" stroke="#111111" stroke-width="2.5" stroke-linecap="round"></path>
     </svg>`;
 }
 
@@ -252,28 +260,51 @@ class LutarymWasteCollectionCard extends HTMLElement {
           text-align: center;
         }
         .badge {
-          margin-top: 6px;
-          padding: 2px 10px;
-          border-radius: 12px;
-          font-size: 0.8em;
-          font-weight: 600;
-          color: #ffffff;
-          background: var(--secondary-text-color);
+          margin-top: 8px;
+          padding: 3px 12px;
+          border: 2px solid #111111;
+          border-radius: 14px 14px 14px 4px;
+          font-family: "Comic Sans MS", "Chalkboard SE", cursive;
+          font-size: 0.85em;
+          font-weight: 700;
+          color: #111111;
+          background: #ffe14d;
+          box-shadow: 2px 2px 0 #111111;
+          transform: rotate(-4deg);
         }
         .badge.today {
-          background: var(--bin-color, #888888);
+          background: #ff5a5a;
+          color: #ffffff;
         }
         .tomorrow .bin-wrap {
-          animation: hop 1.8s ease-in-out infinite;
+          animation: boing 1.6s ease-in-out infinite;
         }
         .today .bin-wrap {
-          animation: hop 0.9s ease-in-out infinite, glow 1.2s ease-in-out infinite;
+          animation: boingBig 0.8s ease-in-out infinite, glow 1.2s ease-in-out infinite;
         }
-        @keyframes hop {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          25% { transform: translateY(-14px) rotate(-4deg); }
-          50% { transform: translateY(0) rotate(0deg); }
-          75% { transform: translateY(-14px) rotate(4deg); }
+        .bin-wrap .eyes {
+          transform-box: fill-box;
+          transform-origin: center;
+          animation: blink 3.2s infinite;
+        }
+        @keyframes boing {
+          0%, 12% { transform: translateY(0) scale(1.12, 0.88) rotate(0deg); }
+          45% { transform: translateY(-24px) scale(0.92, 1.08) rotate(-10deg); }
+          60% { transform: translateY(-24px) scale(0.92, 1.08) rotate(10deg); }
+          80% { transform: translateY(0) scale(1.14, 0.86) rotate(0deg); }
+          90% { transform: translateY(0) scale(0.98, 1.02) rotate(0deg); }
+          100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+        }
+        @keyframes boingBig {
+          0%, 12% { transform: translateY(0) scale(1.15, 0.85) rotate(0deg); }
+          40% { transform: translateY(-36px) scale(0.9, 1.1) rotate(-14deg); }
+          60% { transform: translateY(-36px) scale(0.9, 1.1) rotate(14deg); }
+          80% { transform: translateY(0) scale(1.18, 0.82) rotate(0deg); }
+          100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+        }
+        @keyframes blink {
+          0%, 92%, 100% { transform: scaleY(1); }
+          95% { transform: scaleY(0.1); }
         }
         @keyframes glow {
           0%, 100% { filter: drop-shadow(0 0 2px var(--bin-color)); }
